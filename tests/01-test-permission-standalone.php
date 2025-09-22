@@ -330,7 +330,7 @@ class PermissionStandaloneTest
                 'resources' => [
                     '1' => [
                         'name' => 'New Batch User 1',
-                        'email' => 'newbatch1_' . time() . '@example.com',
+                        'email' => 'newbatch1_' . uniqid() . '@example.com',
                         'password' => 'password123'
                     ],
                     '2' => [

@@ -330,12 +330,12 @@ class SuperAdminPermissionStandaloneTest
                 'resources' => [
                     '1' => [
                         'name' => 'New Batch User 1',
-                        'email' => 'newbatch1_' . time() . '@example.com',
+                        'email' => 'newbatch1_' . uniqid() . '@example.com',
                         'password' => 'password123'
                     ],
                     '2' => [
                         'name' => 'New Batch User 2', 
-                        'email' => 'newbatch2_' . time() . '@example.com',
+                        'email' => 'newbatch2_' . uniqid() . '@example.com',
                         'password' => 'password123'
                     ]
                 ]
@@ -344,15 +344,15 @@ class SuperAdminPermissionStandaloneTest
                 'resources' => [
                     '1' => [
                         'name' => 'Updated User 1 via Batch PATCH',
-                        'email' => 'updatedbatch1_' . time() . '@example.com'
+                        'email' => 'updatedbatch1_' . uniqid() . '@example.com'
                     ],
                     '2' => [
                         'name' => 'Updated User 2 via Batch PATCH', 
-                        'email' => 'updatedbatch2_' . time() . '@example.com'
+                        'email' => 'updatedbatch2_' . uniqid() . '@example.com'
                     ]
                 ]
             ], 'name' => 'Batch update users'],
-            ['endpoint' => 'users', 'method' => 'POST', 'data' => ['name' => 'Test User', 'email' => 'test' . time() . '@example.com', 'password' => 'password'], 'name' => 'Create user'],
+            ['endpoint' => 'users', 'method' => 'POST', 'data' => ['name' => 'Test User', 'email' => 'test_' . uniqid() . '@example.com', 'password' => 'password'], 'name' => 'Create user'],
             ['endpoint' => 'users/1', 'method' => 'PUT', 'data' => ['name' => 'Updated User'], 'name' => 'Update user'],
         ];
         

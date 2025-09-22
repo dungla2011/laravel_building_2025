@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
-
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
 use Orion\Http\Controllers\Controller;
 
 class UserController extends Controller
@@ -43,6 +44,23 @@ class UserController extends Controller
     }
 
     /**
+     * Handle store operation with proper error handling
+     */
+    public function store(\Orion\Http\Requests\Request $request)
+    {
+        try {
+            return parent::store($request);
+        } catch (UniqueConstraintViolationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'email' => ['The email has already been taken.']
+                ]
+            ], 422);
+        }
+    }
+
+    /**
      * Perform validation before updating the model.
      */
     protected function beforeUpdate($request, $model)
@@ -52,6 +70,23 @@ class UserController extends Controller
             return;
         }
         $request->validate($this->updateRules());
+    }
+
+    /**
+     * Handle update operation with proper error handling
+     */
+    public function update(\Orion\Http\Requests\Request $request, ...$args)
+    {
+        try {
+            return parent::update($request, ...$args);
+        } catch (UniqueConstraintViolationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'email' => ['The email has already been taken.']
+                ]
+            ], 422);
+        }
     }
 
     /**
@@ -151,9 +186,43 @@ class UserController extends Controller
     }
 
     /**
+     * Handle batch store with proper error handling
+     */
+    public function batchStore(\Orion\Http\Requests\Request $request)
+    {
+        try {
+            return parent::batchStore($request);
+        } catch (UniqueConstraintViolationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'email' => ['One or more email addresses have already been taken.']
+                ]
+            ], 422);
+        }
+    }
+
+    /**
+     * Handle batch update with proper error handling
+     */
+    public function batchUpdate(\Orion\Http\Requests\Request $request)
+    {
+        try {
+            return parent::batchUpdate($request);
+        } catch (UniqueConstraintViolationException $e) {
+            return response()->json([
+                'message' => 'The given data was invalid.',
+                'errors' => [
+                    'email' => ['One or more email addresses have already been taken.']
+                ]
+            ], 422);
+        }
+    }
+
+    /**
      * Override batch delete to add validation.
      */
-    public function batchDelete($request)
+    public function batchDelete(\Orion\Http\Requests\Request $request)
     {
         // Validate request first
         $request->validate($this->deleteRulesForBatch());
