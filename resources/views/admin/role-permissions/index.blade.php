@@ -64,7 +64,7 @@ code {
 }
 
 .table-responsive {
-    max-height: 400px;
+    /* max-height: 400px; */
     overflow-y: auto;
 }
 

@@ -121,6 +121,7 @@ class ApiDocController extends Controller
         // Get model fields from database schema
         $fields = $this->getModelFields($model);
         
+        
         // Get permissions for this resource
         $permissions = $this->getPermissions($resource);
         
