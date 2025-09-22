@@ -14,7 +14,12 @@
             
             <hr class="my-4">
             
-            <h6 class="mb-3">Permissions & Roles</h6>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Permissions & Roles</h6>
+                <a href="{{ route('guide.api.roles-permissions') }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View JSON">
+                    <i class="bi bi-filetype-json"></i>
+                </a>
+            </div>
             
             <div class="mb-3">
                 <h6 class="small text-uppercase text-muted mb-2">Available Permissions</h6>
@@ -47,10 +52,25 @@
     <div class="col-lg-9">
         <!-- Header -->
         <div class="mb-4">
-            <h1 class="h3">Users API Documentation</h1>
-            <p class="text-muted">
-                Laravel Orion Users API reference with interactive testing.
-            </p>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h1 class="h3">Users API Documentation</h1>
+                    <p class="text-muted mb-0">
+                        Laravel Orion Users API reference with interactive testing.
+                    </p>
+                </div>
+                <div class="text-end">
+                    <a href="{{ route('guide.api.roles-permissions') }}" target="_blank" class="btn btn-primary btn-sm me-2">
+                        <i class="bi bi-people-fill"></i> Roles & Permissions
+                    </a>
+                    <a href="{{ route('guide.api.json') }}" class="btn btn-outline-primary btn-sm me-2">
+                        <i class="bi bi-code-square"></i> JSON API Specs
+                    </a>
+                    <a href="{{ route('guide.api.openapi') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-download"></i> OpenAPI JSON
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- Authentication Info -->
@@ -63,13 +83,45 @@
                 Authorization: Bearer YOUR_TOKEN_HERE
             </div>
             <div class="mt-3">
-                <h6>Test Users Available:</h6>
-                <ul class="mb-0">
-                    <li>Super Admin: superadmin@example.com / password</li>
-                    <li>Admin: admin@example.com / password</li>
-                    <li>Editor: editor@example.com / password</li>
-                    <li>Viewer: viewer@example.com / password</li>
-                </ul>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Test Users Available:</h6>
+                        <ul class="mb-0">
+                            <li><strong>Super Admin:</strong> superadmin@example.com / password</li>
+                            <li><strong>Admin:</strong> admin@example.com / password</li>
+                            <li><strong>Editor:</strong> editor@example.com / password</li>
+                            <li><strong>Viewer:</strong> viewer@example.com / password</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Role Permissions:</h6>
+                        <div class="small text-muted">
+                            <div><strong>Super Admin:</strong> All operations</div>
+                            <div><strong>Admin:</strong> Create, Read, Update, Delete</div>
+                            <div><strong>Editor:</strong> Read, Update only</div>
+                            <div><strong>Viewer:</strong> Read only</div>
+                            <div class="mt-2">
+                                <a href="{{ route('guide.api.roles-permissions') }}" target="_blank" class="btn btn-outline-info btn-xs">
+                                    <i class="bi bi-info-circle"></i> View detailed permissions JSON
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JSON API Info -->
+        <div class="alert alert-info" role="alert">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="bi bi-lightbulb-fill"></i>
+                </div>
+                <div>
+                    <strong>Machine-readable API Documentation:</strong> 
+                    All API endpoints, roles, and permissions are available in JSON format for automated integration. 
+                    <a href="{{ route('guide.api.json') }}" class="alert-link">View all JSON endpoints →</a>
+                </div>
             </div>
         </div>
 
@@ -79,25 +131,27 @@
                 <h5 class="card-title">Get Authentication Token</h5>
                 <p class="text-muted">Login to get your API token for testing:</p>
                 
-                <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Email</label>
-                        <select class="form-select" id="loginEmail">
-                            <option value="superadmin@example.com">Super Admin</option>
-                            <option value="admin@example.com">Admin</option>
-                            <option value="editor@example.com">Editor</option>
-                            <option value="viewer@example.com">Viewer</option>
-                        </select>
+                <form id="loginForm" onsubmit="event.preventDefault(); getAuthToken();">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <select class="form-select" id="loginEmail">
+                                <option value="superadmin@example.com">Super Admin</option>
+                                <option value="admin@example.com">Admin</option>
+                                <option value="editor@example.com">Editor</option>
+                                <option value="viewer@example.com">Viewer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" value="password">
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Password</label>
-                        <input type="password" class="form-control" id="loginPassword" value="password">
-                    </div>
-                </div>
-                <button class="btn btn-primary" onclick="getAuthToken()">
-                    <span class="spinner-border spinner-border-sm loading-spinner"></span>
-                    Get Token
-                </button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="spinner-border spinner-border-sm loading-spinner"></span>
+                        Get Token
+                    </button>
+                </form>
                 
                 <div class="mt-3" id="tokenResult" style="display: none;">
                     <label class="form-label">Your API Token:</label>
@@ -178,11 +232,27 @@ let endpoints = [];
 document.addEventListener('DOMContentLoaded', async function() {
     try {
         const response = await axios.get('{{ route("guide.api.users.data") }}');
-        endpoints = response.data;
+        // Handle new data structure - endpoints are now in response.data.endpoints
+        const data = response.data;
+        endpoints = data.endpoints || data; // Get endpoints from new structure
+        
+        if (!Array.isArray(endpoints)) {
+            console.error('Invalid endpoints data structure:', endpoints);
+            return;
+        }
+        
         renderNavigation();
         renderEndpoints();
     } catch (error) {
         console.error('Failed to load API endpoints:', error);
+        // Show error message to user
+        document.getElementById('apiEndpoints').innerHTML = `
+            <div class="alert alert-danger" role="alert">
+                <h5>Failed to load API endpoints</h5>
+                <p>There was an error loading the API documentation. Please check the console for details.</p>
+                <small class="text-muted">Error: ${error.message}</small>
+            </div>
+        `;
     }
 });
 
