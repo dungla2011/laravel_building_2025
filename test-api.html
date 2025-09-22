@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API</title>
+</head>
+<body>
+    <h1>Test API</h1>
+    <button onclick="testAPI()">Test Users API</button>
+    <div id="result"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <script>
+        async function testAPI() {
+            try {
+                console.log('Testing API...');
+                const response = await axios.get('http://127.0.0.1:8000/api/users');
+                console.log('API Response:', response.data);
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(response.data, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('API Error:', error);
+                document.getElementById('result').innerHTML = '<pre style="color: red;">Error: ' + error.message + '</pre>';
+            }
+        }
+    </script>
+</body>
+</html>

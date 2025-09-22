@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+
 use Orion\Http\Controllers\Controller;
 
 class UserController extends Controller
@@ -13,6 +14,11 @@ class UserController extends Controller
     protected $model = User::class;
 
     /**
+     * Enable authorization
+     */
+    protected $authorizesRequests = true;
+
+    /**
      * The attributes that are mass assignable.
      */
     protected function fillableBy(): array
@@ -20,14 +26,9 @@ class UserController extends Controller
         return ['name', 'email', 'password'];
     }
 
-    /**
-     * Disable authorization for demo purposes
-     */
-    public function authorize($gate, $arguments = [])
-    {
-        // Skip authorization for demo
-        return true;
-    }
+    
+
+
 
     /**
      * Perform validation before storing the model.
