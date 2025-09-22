@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\User;
+use App\Validators\UserValidator;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 use Orion\Http\Controllers\Controller;
 
 class UserController extends Controller
@@ -36,11 +40,11 @@ class UserController extends Controller
      */
     protected function beforeStore($request, $model)
     {
-        // Skip validation for batch operations
-        if (request()->is('*/batch')) {
-            return;
+        // Only validate individual rules for single model operations
+        // Batch operations will be handled by beforeBatchStore
+        if (!$request->has('resources')) {
+            $request->validate($this->storeRules());
         }
-        $request->validate($this->storeRules());
     }
 
     /**
@@ -65,11 +69,11 @@ class UserController extends Controller
      */
     protected function beforeUpdate($request, $model)
     {
-        // Skip validation for batch operations  
-        if (request()->is('*/batch')) {
-            return;
+        // Only validate individual rules for single model operations
+        // Batch operations will be handled by beforeBatchUpdate
+        if (!$request->has('resources')) {
+            $request->validate($this->updateRules());
         }
-        $request->validate($this->updateRules());
     }
 
     /**
@@ -90,17 +94,20 @@ class UserController extends Controller
     }
 
     /**
-     * Disable batch validation for now due to Laravel Orion limitations
+     * Perform validation before batch store operations
      */
-    // protected function beforeBatchStore($request)
-    // {
-    //     $request->validate($this->storeRulesForBatch());
-    // }
+    protected function beforeBatchStore($request)
+    {
+        $request->validate($this->storeRulesForBatch());
+    }
 
-    // protected function beforeBatchUpdate($request)
-    // {
-    //     $request->validate($this->updateRulesForBatch());
-    // }
+    /**
+     * Perform validation before batch update operations
+     */
+    protected function beforeBatchUpdate($request)
+    {
+        $request->validate($this->updateRulesForBatch());
+    }
 
     /**
      * The attributes that can be filtered by.
@@ -131,11 +138,7 @@ class UserController extends Controller
      */
     protected function storeRules(): array
     {
-        return [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8'
-        ];
+        return UserValidator::createRules();
     }
 
     /**
@@ -143,11 +146,8 @@ class UserController extends Controller
      */
     protected function updateRules(): array
     {
-        return [
-            'name' => 'sometimes|required|string|max:255',
-            'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . request()->route('user'),
-            'password' => 'sometimes|required|string|min:8'
-        ];
+        $userId = request()->route('user');
+        return UserValidator::updateRules($userId);
     }
 
     /**
@@ -155,11 +155,7 @@ class UserController extends Controller
      */
     protected function storeRulesForBatch(): array
     {
-        return [
-            'resources.*.name' => 'required|string|max:255',
-            'resources.*.email' => 'required|string|email|max:255|unique:users',
-            'resources.*.password' => 'required|string|min:8'
-        ];
+        return UserValidator::batchCreateRules();
     }
 
     /**
@@ -167,11 +163,7 @@ class UserController extends Controller
      */
     protected function updateRulesForBatch(): array
     {
-        return [
-            'resources.*.name' => 'sometimes|required|string|max:255',
-            'resources.*.email' => 'sometimes|required|string|email|max:255',
-            'resources.*.password' => 'sometimes|required|string|min:8'
-        ];
+        return UserValidator::batchUpdateRules();
     }
 
     /**
