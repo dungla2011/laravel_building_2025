@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid">
     <div class="p-4">
-        <h1 class="h2 mb-4">API JSON Documentation</h1>
+        <h1 class="h2 mb-4">API JSON Documentation Overview</h1>
         
         <div class="alert alert-info" role="alert">
             <div class="d-flex">
@@ -13,15 +13,68 @@
                     <i class="fas fa-info-circle"></i>
                 </div>
                 <div>
-                    <strong>Automatic API Integration:</strong> These JSON endpoints provide machine-readable API specifications for automated system integration, code generation, and testing tools.
+                    <strong>Machine-Readable API Documentation:</strong> This page provides an overview of all available JSON endpoints for different API resources. Each resource has its own detailed JSON documentation for automated integration, code generation, and testing tools.
                 </div>
             </div>
         </div>
 
-        <!-- Available JSON Endpoints -->
+        <!-- Resources Overview -->
         <div class="card mb-4">
             <div class="card-header">
-                <h2 class="h5 mb-0">Available JSON Endpoints</h2>
+                <h2 class="h5 mb-0">Available API Resources</h2>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <!-- Users API -->
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h3 class="h6 mb-2">
+                                    <i class="fas fa-users me-2"></i>
+                                    Users API
+                                </h3>
+                                <p class="text-muted small mb-3">Complete user management with role-based access control, authentication, and CRUD operations.</p>
+                                <div class="d-flex gap-2">
+                                    <a href="{{ route('guide.api.users') }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-book me-1"></i> HTML Guide
+                                    </a>
+                                    <a href="{{ route('guide.api.users.json') }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-code me-1"></i> JSON Docs
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Future: Products API -->
+                    <div class="col-md-6">
+                        <div class="card h-100 opacity-50">
+                            <div class="card-body">
+                                <h3 class="h6 mb-2">
+                                    <i class="fas fa-box me-2"></i>
+                                    Products API <small class="text-muted">(Coming Soon)</small>
+                                </h3>
+                                <p class="text-muted small mb-3">Product catalog management with categories, inventory, and pricing features.</p>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-secondary btn-sm" disabled>
+                                        <i class="fas fa-book me-1"></i> HTML Guide
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" disabled>
+                                        <i class="fas fa-code me-1"></i> JSON Docs
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Global JSON Endpoints -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2 class="h5 mb-0">Global JSON Endpoints</h2>
+                <small class="text-muted">Combined specifications for all API resources</small>
             </div>
             <div class="card-body">
                 <div class="row g-4">
@@ -32,7 +85,7 @@
                             <div class="bg-light p-2 rounded mb-2">
                                 <code class="small">GET {{ url('/guide/api/openapi.json') }}</code>
                             </div>
-                            <p class="text-muted mb-3 small">Full OpenAPI 3.0 specification for all API resources. Compatible with Swagger UI, Postman, and code generation tools.</p>
+                            <p class="text-muted mb-3 small">Full OpenAPI 3.0 specification combining all API resources (Users, Products, etc.). Perfect for comprehensive API documentation and client generation.</p>
                             <div class="d-flex gap-2">
                                 <a href="{{ url('/guide/api/openapi.json') }}" target="_blank" class="btn btn-primary btn-sm">
                                     <i class="fas fa-external-link-alt me-1"></i>
@@ -49,11 +102,11 @@
                     <!-- Swagger JSON (Alias) -->
                     <div class="col-12">
                         <div class="border rounded p-3">
-                            <h3 class="h6 mb-2">Swagger JSON (Alias)</h3>
+                            <h3 class="h6 mb-2">Swagger JSON (Legacy Alias)</h3>
                             <div class="bg-light p-2 rounded mb-2">
                                 <code class="small">GET {{ url('/guide/api/swagger.json') }}</code>
                             </div>
-                            <p class="text-muted mb-3 small">Same as OpenAPI JSON but with traditional Swagger naming for compatibility with legacy tools.</p>
+                            <p class="text-muted mb-3 small">Same as OpenAPI JSON but with traditional Swagger naming for compatibility with legacy tools and frameworks.</p>
                             <div class="d-flex gap-2">
                                 <a href="{{ url('/guide/api/swagger.json') }}" target="_blank" class="btn btn-success btn-sm">
                                     <i class="fas fa-external-link-alt me-1"></i>
@@ -67,61 +120,19 @@
                         </div>
                     </div>
 
-                    <!-- Users Specific OpenAPI -->
+                    <!-- Global Roles & Permissions -->
                     <div class="col-12">
-                        <div class="border rounded p-3">
-                            <h3 class="h6 mb-2">Users Resource OpenAPI</h3>
-                            <div class="bg-light p-2 rounded mb-2">
-                                <code class="small">GET {{ url('/guide/api/users/openapi.json') }}</code>
-                            </div>
-                            <p class="text-muted mb-3 small">OpenAPI specification specifically for Users resource endpoints only.</p>
-                            <div class="d-flex gap-2">
-                                <a href="{{ url('/guide/api/users/openapi.json') }}" target="_blank" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-external-link-alt me-1"></i>
-                                    View JSON
-                                </a>
-                                <button onclick="copyToClipboard(this)" data-url="{{ url('/guide/api/users/openapi.json') }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-copy me-1"></i>
-                                    Copy URL
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Custom API Data -->
-                    <div class="col-12">
-                        <div class="border rounded p-3">
-                            <h3 class="h6 mb-2">Custom API Data (JavaScript)</h3>
-                            <div class="bg-light p-2 rounded mb-2">
-                                <code class="small">GET {{ url('/guide/api/users/data') }}</code>
-                            </div>
-                            <p class="text-muted mb-3 small">Custom JSON format optimized for JavaScript applications and dynamic documentation.</p>
-                            <div class="d-flex gap-2">
-                                <a href="{{ url('/guide/api/users/data') }}" target="_blank" class="btn btn-info btn-sm">
-                                    <i class="fas fa-external-link-alt me-1"></i>
-                                    View JSON
-                                </a>
-                                <button onclick="copyToClipboard(this)" data-url="{{ url('/guide/api/users/data') }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-copy me-1"></i>
-                                    Copy URL
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Roles & Permissions Data -->
-                    <div class="col-12">
-                        <div class="border rounded p-3 border-primary">
-                            <h3 class="h6 mb-2 text-primary">
-                                <i class="fas fa-users-cog me-1"></i>
-                                Roles & Permissions Data
+                        <div class="border rounded p-3 border-info">
+                            <h3 class="h6 mb-2 text-info">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Global Roles & Permissions
                             </h3>
                             <div class="bg-light p-2 rounded mb-2">
                                 <code class="small">GET {{ url('/guide/api/roles-permissions.json') }}</code>
                             </div>
-                            <p class="text-muted mb-3 small">Complete roles and permissions information from database with user access matrix and sample credentials.</p>
+                            <p class="text-muted mb-3 small">Complete system-wide roles and permissions data applicable to all API resources with user access matrix.</p>
                             <div class="d-flex gap-2">
-                                <a href="{{ url('/guide/api/roles-permissions.json') }}" target="_blank" class="btn btn-primary btn-sm">
+                                <a href="{{ url('/guide/api/roles-permissions.json') }}" target="_blank" class="btn btn-info btn-sm">
                                     <i class="fas fa-external-link-alt me-1"></i>
                                     View JSON
                                 </a>

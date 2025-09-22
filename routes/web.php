@@ -16,14 +16,26 @@ Route::prefix('admin')->group(function () {
 // API Documentation routes
 Route::prefix('guide')->group(function () {
     Route::prefix('api')->group(function () {
-        Route::get('/users', [ApiDocController::class, 'users'])->name('guide.api.users');
-        Route::get('/users/data', [ApiDocController::class, 'apiData'])->name('guide.api.users.data');
-        Route::get('/users/openapi.json', [ApiDocController::class, 'openApiJson'])->name('guide.api.users.openapi');
         
-        // General API documentation endpoints
+        // Users resource documentation
+        Route::prefix('users')->group(function () {
+            Route::get('/', [ApiDocController::class, 'users'])->name('guide.api.users');
+            Route::get('/json', [ApiDocController::class, 'usersJsonGuide'])->name('guide.api.users.json');
+            Route::get('/data.json', [ApiDocController::class, 'apiData'])->name('guide.api.users.data');
+            Route::get('/openapi.json', [ApiDocController::class, 'openApiJson'])->name('guide.api.users.openapi');
+            Route::get('/roles-permissions.json', [ApiDocController::class, 'rolesPermissions'])->name('guide.api.users.roles-permissions');
+        });
+        
+        // General API documentation endpoints (for all resources combined)
         Route::get('/openapi.json', [ApiDocController::class, 'fullOpenApiJson'])->name('guide.api.openapi');
         Route::get('/swagger.json', [ApiDocController::class, 'fullOpenApiJson'])->name('guide.api.swagger');
-        Route::get('/roles-permissions.json', [ApiDocController::class, 'rolesPermissions'])->name('guide.api.roles-permissions');
         Route::get('/json', [ApiDocController::class, 'jsonGuide'])->name('guide.api.json');
+        
+        // Future: Products resource documentation
+        // Route::prefix('products')->group(function () {
+        //     Route::get('/', [ApiDocController::class, 'products'])->name('guide.api.products');
+        //     Route::get('/data.json', [ApiDocController::class, 'productsData'])->name('guide.api.products.data');
+        //     Route::get('/openapi.json', [ApiDocController::class, 'productsOpenApiJson'])->name('guide.api.products.openapi');
+        // });
     });
 });

@@ -16,7 +16,7 @@
             
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">Permissions & Roles</h6>
-                <a href="{{ route('guide.api.roles-permissions') }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View JSON">
+                <a href="{{ route('guide.api.users.roles-permissions') }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View JSON">
                     <i class="bi bi-filetype-json"></i>
                 </a>
             </div>
@@ -60,14 +60,14 @@
                     </p>
                 </div>
                 <div class="text-end">
-                    <a href="{{ route('guide.api.roles-permissions') }}" target="_blank" class="btn btn-primary btn-sm me-2">
+                    <a href="{{ route('guide.api.users.roles-permissions') }}" target="_blank" class="btn btn-primary btn-sm me-2">
                         <i class="bi bi-people-fill"></i> Roles & Permissions
                     </a>
                     <a href="{{ route('guide.api.json') }}" class="btn btn-outline-primary btn-sm me-2">
                         <i class="bi bi-code-square"></i> JSON API Specs
                     </a>
-                    <a href="{{ route('guide.api.openapi') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
-                        <i class="bi bi-download"></i> OpenAPI JSON
+                    <a href="{{ route('guide.api.users.openapi') }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-download"></i> Users OpenAPI JSON
                     </a>
                 </div>
             </div>
@@ -101,7 +101,7 @@
                             <div><strong>Editor:</strong> Read, Update only</div>
                             <div><strong>Viewer:</strong> Read only</div>
                             <div class="mt-2">
-                                <a href="{{ route('guide.api.roles-permissions') }}" target="_blank" class="btn btn-outline-info btn-xs">
+                                <a href="{{ route('guide.api.users.roles-permissions') }}" target="_blank" class="btn btn-outline-info btn-xs">
                                     <i class="bi bi-info-circle"></i> View detailed permissions JSON
                                 </a>
                             </div>

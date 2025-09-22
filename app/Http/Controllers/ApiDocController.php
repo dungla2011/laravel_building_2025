@@ -25,7 +25,7 @@ class ApiDocController extends Controller
     }
 
     /**
-     * Show JSON API documentation guide
+     * Show JSON API documentation guide (general overview)
      */
     public function jsonGuide()
     {
@@ -33,14 +33,25 @@ class ApiDocController extends Controller
     }
 
     /**
-     * Get roles and permissions information as JSON
+     * Show JSON API documentation guide for Users resource specifically
+     */
+    public function usersJsonGuide()
+    {
+        return view('guide.api.users-json');
+    }
+
+    /**
+     * Get roles and permissions information as JSON for users resource
      */
     public function rolesPermissions()
     {
-        $rolesWithPermissions = $this->getRolesWithPermissions('users');
+        $resource = 'users'; // This method is now specific to users
+        $rolesWithPermissions = $this->getRolesWithPermissions($resource);
         $sampleUsers = $this->getSampleUsers();
 
         return response()->json([
+            'resource' => $resource,
+            'resource_endpoints' => config('app.url') . '/api/' . $resource,
             'roles' => $rolesWithPermissions,
             'sample_users' => $sampleUsers,
             'authentication' => [
@@ -50,14 +61,15 @@ class ApiDocController extends Controller
                 'instructions' => 'Login with email/password to get access token, then include token in Authorization header'
             ],
             'summary' => [
+                'resource' => ucfirst($resource) . ' API',
                 'total_roles' => count($rolesWithPermissions),
                 'total_sample_users' => count($sampleUsers),
                 'available_actions' => ['view', 'create', 'update', 'delete'],
                 'role_hierarchy' => [
                     'super-admin' => 'Full access to all resources and actions',
-                    'admin' => 'Full CRUD access to users resource',
-                    'editor' => 'Can view and update users, but not create or delete',
-                    'viewer' => 'Read-only access to users resource'
+                    'admin' => 'Full CRUD access to ' . $resource . ' resource',
+                    'editor' => 'Can view and update ' . $resource . ', but not create or delete',
+                    'viewer' => 'Read-only access to ' . $resource . ' resource'
                 ]
             ]
         ], 200, [], JSON_PRETTY_PRINT);
