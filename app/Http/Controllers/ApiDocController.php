@@ -1142,13 +1142,18 @@ class ApiDocController extends Controller
         // Check permissions for other roles
         $permissions = $role->permissions->pluck('action')->toArray();
         
-        if (in_array('view', $permissions)) {
+        // Map Laravel Orion actions to endpoint access
+        // Note: Some permissions logically grant access to multiple related endpoints
+        if (in_array('index', $permissions)) {
             $endpoints['GET /api/users'] = 'List all users with pagination, filtering, sorting';
-            $endpoints['GET /api/users/{id}'] = 'Get specific user details';
-            $endpoints['POST /api/users/search'] = 'Advanced search users';
+            $endpoints['POST /api/users/search'] = 'Advanced search users (requires index permission)';
         }
         
-        if (in_array('create', $permissions)) {
+        if (in_array('show', $permissions)) {
+            $endpoints['GET /api/users/{id}'] = 'Get specific user details';
+        }
+        
+        if (in_array('store', $permissions)) {
             $endpoints['POST /api/users'] = 'Create new user';
             $endpoints['POST /api/users/batch'] = 'Create multiple users';
         }
@@ -1158,7 +1163,7 @@ class ApiDocController extends Controller
             $endpoints['PATCH /api/users/batch'] = 'Update multiple users';
         }
         
-        if (in_array('delete', $permissions)) {
+        if (in_array('destroy', $permissions)) {
             $endpoints['DELETE /api/users/{id}'] = 'Delete user';
             $endpoints['DELETE /api/users/batch'] = 'Delete multiple users';
         }
