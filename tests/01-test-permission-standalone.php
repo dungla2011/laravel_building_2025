@@ -24,7 +24,7 @@
  * Runs without PHPUnit framework using pure PHP CURL
  */
 
-class SuperAdminPermissionStandaloneTest
+class PermissionStandaloneTest
 {
     private string $baseUrl = 'http://127.0.0.1:8000';
     private string $cookieJar;
@@ -470,7 +470,7 @@ echo "Example: php " . basename(__FILE__) . " editor\n\n";
 
 // Run the test
 try {
-    $test = new SuperAdminPermissionStandaloneTest();
+    $test = new PermissionStandaloneTest();
     $test->runForRole($role);
     echo "\nTest completed at: " . date('Y-m-d H:i:s') . "\n";
 } catch (Exception $e) {
