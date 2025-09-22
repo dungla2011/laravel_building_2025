@@ -3,6 +3,7 @@
 @section('title', 'Role Permissions Management')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('assets/css/toast-system.min.css') }}">
 <style>
 .permission-switch {
     cursor: pointer;
@@ -271,6 +272,7 @@ code {
 @endsection
 
 @push('scripts')
+<script src="{{ asset('assets/js/toast-system.js') }}"></script>
 <script>
 // CSRF token setup
 $.ajaxSetup({
@@ -489,33 +491,8 @@ function hideLoading() {
     $('#loading-overlay').addClass('d-none');
 }
 
-function showToast(type, message) {
-    // Create toast element
-    const toastId = 'toast-' + Date.now();
-    const toastClass = type === 'success' ? 'bg-success' : 'bg-danger';
-    const icon = type === 'success' ? 'check-circle' : 'exclamation-triangle';
-    
-    const toastHtml = `
-        <div id="${toastId}" class="toast ${toastClass} text-white position-fixed top-0 end-0 m-3" style="z-index: 10000;">
-            <div class="toast-body">
-                <i class="fas fa-${icon} me-2"></i>
-                ${message}
-            </div>
-        </div>
-    `;
-    
-    $('body').append(toastHtml);
-    
-    // Show toast
-    const toastElement = document.getElementById(toastId);
-    const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
-    toast.show();
-    
-    // Remove toast after hiding
-    toastElement.addEventListener('hidden.bs.toast', function() {
-        $(this).remove();
-    });
-}
+// Toast function now uses the external library
+// showToast is provided by toast-system.js
 
 // Auto-refresh every 5 minutes to keep data fresh
 setInterval(function() {

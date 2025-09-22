@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toast System Demo</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Toast System CSS -->
+    <link rel="stylesheet" href="assets/css/toast-system.css">
+</head>
+<body>
+    <div class="container my-5">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="mb-4">
+                    <i class="fas fa-bell me-2 text-primary"></i>
+                    Toast System Demo
+                </h1>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Test Toast Notifications</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Basic Toasts</h6>
+                                <div class="btn-group-vertical d-grid gap-2 mb-3">
+                                    <button class="btn btn-success" onclick="showToast('success', 'Operation completed successfully!')">
+                                        <i class="fas fa-check-circle me-2"></i>Success Toast
+                                    </button>
+                                    <button class="btn btn-danger" onclick="showToast('error', 'Something went wrong! Please try again.')">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Error Toast
+                                    </button>
+                                    <button class="btn btn-warning" onclick="showToast('warning', 'Please check your input before proceeding.')">
+                                        <i class="fas fa-exclamation-circle me-2"></i>Warning Toast
+                                    </button>
+                                    <button class="btn btn-info" onclick="showToast('info', 'New updates are available for download.')">
+                                        <i class="fas fa-info-circle me-2"></i>Info Toast
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Advanced Toasts</h6>
+                                <div class="btn-group-vertical d-grid gap-2 mb-3">
+                                    <button class="btn btn-primary" onclick="toastSystem.success('Success with title!', {title: 'Great!', showProgress: true})">
+                                        <i class="fas fa-trophy me-2"></i>Success with Title
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="toastSystem.error('This error won\\'t auto-hide', {delay: 0, title: 'Critical Error'})">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>Persistent Error
+                                    </button>
+                                    <button class="btn btn-dark" onclick="toastSystem.info('Quick message', {delay: 2000, showProgress: true})">
+                                        <i class="fas fa-clock me-2"></i>Quick Toast (2s)
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="toastSystem.clear()">
+                                        <i class="fas fa-trash me-2"></i>Clear All Toasts
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6>Configuration Demo</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-primary w-100" onclick="changePosition('top-start')">
+                                    Top Left
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-primary w-100" onclick="changePosition('top-center')">
+                                    Top Center
+                                </button>
+                            </div>
+                            <div class="col-md-4">
+                                <button class="btn btn-outline-primary w-100" onclick="changePosition('top-end')">
+                                    Top Right
+                                </button>
+                            </div>
+                            <div class="col-md-4 mt-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="changePosition('bottom-start')">
+                                    Bottom Left
+                                </button>
+                            </div>
+                            <div class="col-md-4 mt-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="changePosition('bottom-center')">
+                                    Bottom Center
+                                </button>
+                            </div>
+                            <div class="col-md-4 mt-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="changePosition('bottom-end')">
+                                    Bottom Right
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <h6>Bulk Test</h6>
+                        <button class="btn btn-warning" onclick="bulkTest()">
+                            <i class="fas fa-layer-group me-2"></i>Show Multiple Toasts
+                        </button>
+                        
+                        <hr>
+                        
+                        <h6>jQuery Integration (if loaded)</h6>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button class="btn btn-success me-md-2" onclick="jqueryTest('success')">
+                                $.toast.success()
+                            </button>
+                            <button class="btn btn-danger me-md-2" onclick="jqueryTest('error')">
+                                $.toast.error()
+                            </button>
+                            <button class="btn btn-warning me-md-2" onclick="jqueryTest('warning')">
+                                $.toast.warning()
+                            </button>
+                            <button class="btn btn-info" onclick="jqueryTest('info')">
+                                $.toast.info()
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Usage Examples</h5>
+                    </div>
+                    <div class="card-body">
+                        <h6>Basic Usage:</h6>
+                        <pre><code>// Legacy compatible
+showToast('success', 'Message');
+
+// Advanced usage
+toastSystem.success('Message', {
+    title: 'Success',
+    showProgress: true,
+    delay: 3000
+});</code></pre>
+                        
+                        <h6 class="mt-3">jQuery Usage:</h6>
+                        <pre><code>$.toast.success('Message');
+$.toast.error('Message', {delay: 0});
+$.toast.clear();</code></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery (optional) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Toast System JS -->
+    <script src="assets/js/toast-system.js"></script>
+    
+    <script>
+        function changePosition(position) {
+            toastSystem.configure({ position: position });
+            toastSystem.info(`Position changed to: ${position}`, {
+                title: 'Configuration Updated',
+                showProgress: true
+            });
+        }
+        
+        function bulkTest() {
+            const messages = [
+                { type: 'success', message: 'First operation completed' },
+                { type: 'info', message: 'Processing second task...' },
+                { type: 'warning', message: 'Third task needs attention' },
+                { type: 'error', message: 'Fourth operation failed' },
+                { type: 'success', message: 'Final task completed successfully' }
+            ];
+            
+            messages.forEach((item, index) => {
+                setTimeout(() => {
+                    showToast(item.type, item.message);
+                }, index * 500);
+            });
+        }
+        
+        function jqueryTest(type) {
+            if (typeof $ !== 'undefined' && $.toast) {
+                $.toast[type](`jQuery ${type} toast message`, {
+                    title: `jQuery ${type.toUpperCase()}`,
+                    showProgress: true
+                });
+            } else {
+                showToast('error', 'jQuery not loaded or $.toast not available');
+            }
+        }
+        
+        // Welcome message
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                toastSystem.success('Welcome to Toast System Demo!', {
+                    title: 'Demo Ready',
+                    showProgress: true,
+                    delay: 4000
+                });
+            }, 500);
+        });
+    </script>
+</body>
+</html>

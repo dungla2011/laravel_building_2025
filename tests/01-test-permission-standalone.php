@@ -5,21 +5,8 @@
  * 
  * Tests role permission management for API users endpoints:
  * 1. Enable all permissions and verify all API endpoints work
- * 2. Disable all permissions and verify all API e        echo "✅ Successfully enabled $enabledCount/" . count($usersPermissions) . " permissions\n\n";
-        
-        // Step 2: Test API endpoints (should return 200)
-        echo "🧪 Step 2: Testing API endpoints (expecting success)...\n";
-        $results = $this->testApiEndpoints(true);
-        
-        $successRate = ($results['passed'] / $results['total']) * 100;
-        echo "\n📊 API Test Results: {$results['passed']}/{$results['total']} passed ({$successRate}%)\n";
-        
-        if ($successRate < 70) {
-            throw new Exception("Test failed: Only {$successRate}% of endpoints passed (expected >= 70%)");
-        }
-        
-        echo "✅ {$userData['display_name']} with all permissions can access most API endpoints!\n\n";n 403
- * 
+ * 2. Disable all permissions and verify all API endpoints return 403 Forbidden
+ *
  * Supports multiple roles: super-admin, admin, editor, viewer
  * Runs without PHPUnit framework using pure PHP CURL
  */
