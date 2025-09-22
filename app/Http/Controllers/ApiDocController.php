@@ -1081,10 +1081,10 @@ class ApiDocController extends Controller
                     return [
                         'action' => $permission->action,
                         'name' => $permission->name,
-                        'display_name' => $permission->display_name
+                        'display_name' => $permission->display_name,
+                        'endpoints' => $this->getEndpointsForPermission($permission)
                     ];
-                })->toArray(),
-                'can_access_endpoints' => $this->getEndpointsForRole($role)
+                })->toArray()
             ];
         })->toArray();
     }
@@ -1124,29 +1124,14 @@ class ApiDocController extends Controller
     {
         $endpoints = [];
         
-        // Super admin can access all endpoints
-        if ($role->name === 'super-admin') {
-            return [
-                'GET /api/users' => 'List all users with pagination, filtering, sorting',
-                'POST /api/users' => 'Create new user',
-                'GET /api/users/{id}' => 'Get specific user details',
-                'PUT /api/users/{id}' => 'Update existing user',
-                'DELETE /api/users/{id}' => 'Delete user',
-                'POST /api/users/search' => 'Advanced search users',
-                'POST /api/users/batch' => 'Create multiple users',
-                'PATCH /api/users/batch' => 'Update multiple users',
-                'DELETE /api/users/batch' => 'Delete multiple users'
-            ];
-        }
+        // Super admin follows same permission logic (should have all permissions anyway)
 
         // Check permissions for other roles
         $permissions = $role->permissions->pluck('action')->toArray();
         
-        // Map Laravel Orion actions to endpoint access
-        // Note: Some permissions logically grant access to multiple related endpoints
+        // Precise 1:1 permission to endpoint mapping
         if (in_array('index', $permissions)) {
             $endpoints['GET /api/users'] = 'List all users with pagination, filtering, sorting';
-            $endpoints['POST /api/users/search'] = 'Advanced search users (requires index permission)';
         }
         
         if (in_array('show', $permissions)) {
@@ -1155,19 +1140,64 @@ class ApiDocController extends Controller
         
         if (in_array('store', $permissions)) {
             $endpoints['POST /api/users'] = 'Create new user';
-            $endpoints['POST /api/users/batch'] = 'Create multiple users';
         }
         
         if (in_array('update', $permissions)) {
             $endpoints['PUT /api/users/{id}'] = 'Update existing user';
-            $endpoints['PATCH /api/users/batch'] = 'Update multiple users';
         }
         
         if (in_array('destroy', $permissions)) {
             $endpoints['DELETE /api/users/{id}'] = 'Delete user';
+        }
+        
+        if (in_array('search', $permissions)) {
+            $endpoints['POST /api/users/search'] = 'Advanced search users';
+        }
+        
+        if (in_array('batch', $permissions)) {
+            $endpoints['POST /api/users/batch'] = 'Create multiple users';
+            $endpoints['PATCH /api/users/batch'] = 'Update multiple users';
             $endpoints['DELETE /api/users/batch'] = 'Delete multiple users';
         }
 
+        return $endpoints;
+    }
+
+    /**
+     * Get accessible endpoints for a specific permission
+     */
+    private function getEndpointsForPermission($permission)
+    {
+        $endpoints = [];
+        
+        // Map permission actions to endpoints
+        switch($permission->action) {
+            case 'index':
+                $endpoints[] = 'GET /api/users';
+                break;
+            case 'show':
+                $endpoints[] = 'GET /api/users/{id}';
+                break;
+            case 'store':
+                $endpoints[] = 'POST /api/users';
+                break;
+            case 'update':
+                $endpoints[] = 'PUT /api/users/{id}';
+                break;
+            case 'destroy':
+                $endpoints[] = 'DELETE /api/users/{id}';
+                break;
+            case 'search':
+                $endpoints[] = 'POST /api/users/search';
+                break;
+            case 'batch':
+                // Batch permission covers multiple endpoints
+                $endpoints[] = 'POST /api/users/batch';
+                $endpoints[] = 'PATCH /api/users/batch';  
+                $endpoints[] = 'DELETE /api/users/batch';
+                break;
+        }
+        
         return $endpoints;
     }
 }

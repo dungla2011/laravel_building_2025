@@ -13,20 +13,7 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        // Debug: Log user permissions
-        Log::info('UserPolicy viewAny check', [
-            'user_id' => $user->id,
-            'user_name' => $user->name,
-            'roles' => $user->roles->pluck('name')->toArray(),
-            'permissions' => $user->getAllPermissions()->pluck('name')->toArray()
-        ]);
-        
-        // Temporary: Always allow if user has the permission in their list
-        $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
-        $hasPermission = in_array('user.index', $userPermissions);
-        Log::info('Has user.index permission (array check): ' . ($hasPermission ? 'true' : 'false'));
-        
-        return $hasPermission;
+        return $user->getAllPermissions()->contains('name', 'user.index');
     }
 
     /**
@@ -35,7 +22,7 @@ class UserPolicy
     public function view(User $user, User $model): bool
     {
         // Check if user has permission to view individual user
-        if ($user->hasPermissionTo('user.show')) {
+        if ($user->getAllPermissions()->contains('name', 'user.show')) {
             return true;
         }
         
@@ -49,7 +36,7 @@ class UserPolicy
     public function create(User $user): bool
     {
         // Check if user has permission to create users
-        return $user->hasPermissionTo('user.store');
+        return $user->getAllPermissions()->contains('name', 'user.store');
     }
 
     /**
@@ -58,7 +45,7 @@ class UserPolicy
     public function update(User $user, User $model): bool
     {
         // Check if user has permission to update users
-        if ($user->hasPermissionTo('user.update')) {
+        if ($user->getAllPermissions()->contains('name', 'user.update')) {
             return true;
         }
         
@@ -72,7 +59,7 @@ class UserPolicy
     public function delete(User $user, User $model): bool
     {
         // Check if user has permission to delete users
-        return $user->hasPermissionTo('user.destroy');
+        return $user->getAllPermissions()->contains('name', 'user.destroy');
     }
 
     /**
