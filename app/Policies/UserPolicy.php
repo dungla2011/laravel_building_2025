@@ -13,18 +13,20 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        // Debug: Log user roles
+        // Debug: Log user permissions
         Log::info('UserPolicy viewAny check', [
             'user_id' => $user->id,
             'user_name' => $user->name,
-            'roles' => $user->roles->pluck('name')->toArray()
+            'roles' => $user->roles->pluck('name')->toArray(),
+            'permissions' => $user->getAllPermissions()->pluck('name')->toArray()
         ]);
         
-        // Only super-admin can view all users
-        $hasRole = $user->roles->contains('name', 'super-admin');
-        Log::info('Has super-admin role: ' . ($hasRole ? 'true' : 'false'));
+        // Temporary: Always allow if user has the permission in their list
+        $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
+        $hasPermission = in_array('user.index', $userPermissions);
+        Log::info('Has user.index permission (array check): ' . ($hasPermission ? 'true' : 'false'));
         
-        return $hasRole;
+        return $hasPermission;
     }
 
     /**
@@ -32,8 +34,8 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        // Super admin can view any user
-        if ($user->roles->contains('name', 'super-admin')) {
+        // Check if user has permission to view individual user
+        if ($user->hasPermissionTo('user.show')) {
             return true;
         }
         
@@ -46,8 +48,8 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        // Only super admin can create users
-        return $user->roles->contains('name', 'super-admin');
+        // Check if user has permission to create users
+        return $user->hasPermissionTo('user.store');
     }
 
     /**
@@ -55,8 +57,8 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool
     {
-        // Super admin can update any user
-        if ($user->roles->contains('name', 'super-admin')) {
+        // Check if user has permission to update users
+        if ($user->hasPermissionTo('user.update')) {
             return true;
         }
         
@@ -69,8 +71,8 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        // Only super admin can delete users
-        return $user->roles->contains('name', 'super-admin');
+        // Check if user has permission to delete users
+        return $user->hasPermissionTo('user.destroy');
     }
 
     /**

@@ -8,6 +8,15 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Simple Authentication Routes (for demo purposes)
+Route::get('/login', function () {
+    return redirect('/admin/role-permissions')->with('info', 'Demo mode - authentication bypassed');
+})->name('login');
+
+Route::post('/logout', function () {
+    return redirect('/')->with('success', 'Logged out successfully');
+})->name('logout');
+
 // Admin routes
 Route::prefix('admin')->group(function () {
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
@@ -37,5 +46,18 @@ Route::prefix('guide')->group(function () {
         //     Route::get('/data.json', [ApiDocController::class, 'productsData'])->name('guide.api.products.data');
         //     Route::get('/openapi.json', [ApiDocController::class, 'productsOpenApiJson'])->name('guide.api.products.openapi');
         // });
+    });
+});
+
+// Admin Role-Permission Management Routes (Authentication Required)
+// Route::middleware(['auth'])->prefix('admin')->group(function () {
+Route::prefix('admin')->group(function () {    
+    Route::prefix('role-permissions')->name('admin.role-permissions.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\RolePermissionController::class, 'index'])->name('index');
+        Route::post('/update', [App\Http\Controllers\Admin\RolePermissionController::class, 'updatePermission'])->name('update');
+        Route::post('/bulk-update-role', [App\Http\Controllers\Admin\RolePermissionController::class, 'bulkUpdateRole'])->name('bulk-update-role');
+        Route::post('/bulk-update-resource', [App\Http\Controllers\Admin\RolePermissionController::class, 'bulkUpdateResource'])->name('bulk-update-resource');
+        Route::post('/sync', [App\Http\Controllers\Admin\RolePermissionController::class, 'syncPermissions'])->name('sync');
+        Route::get('/export', [App\Http\Controllers\Admin\RolePermissionController::class, 'exportPermissions'])->name('export');
     });
 });

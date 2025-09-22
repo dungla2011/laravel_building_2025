@@ -15,20 +15,8 @@ class RolePermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create permissions for users resource
-        $permissions = [
-            ['name' => 'users.view', 'display_name' => 'View Users', 'resource' => 'users', 'action' => 'view'],
-            ['name' => 'users.create', 'display_name' => 'Create Users', 'resource' => 'users', 'action' => 'create'],
-            ['name' => 'users.update', 'display_name' => 'Update Users', 'resource' => 'users', 'action' => 'update'],
-            ['name' => 'users.delete', 'display_name' => 'Delete Users', 'resource' => 'users', 'action' => 'delete'],
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(
-                ['name' => $permission['name']],
-                $permission
-            );
-        }
+        // Note: Permissions are now auto-synced from API routes
+        // Run 'php artisan permissions:sync' first to populate permissions
 
         // Create roles
         $superAdmin = Role::firstOrCreate(
@@ -63,22 +51,38 @@ class RolePermissionSeeder extends Seeder
             ]
         );
 
-        // Assign permissions to roles
+        // Assign permissions to roles using API route permissions
+        // Get existing permissions from database
+        $userPermissions = Permission::where('resource', 'users')->pluck('name')->toArray();
         
-        // Super Admin gets all permissions (handled in controller)
-        
-        // Admin gets full CRUD
-        $admin->givePermissionTo('users.view');
-        $admin->givePermissionTo('users.create');
-        $admin->givePermissionTo('users.update');
-        $admin->givePermissionTo('users.delete');
+        // Super Admin gets all API permissions
+        if (!empty($userPermissions)) {
+            $superAdmin->permissions()->sync(Permission::whereIn('name', $userPermissions)->pluck('id'));
+        }
+
+        // Admin gets most permissions (no delete/destroy)
+        $adminPermissions = array_filter($userPermissions, function($perm) {
+            return !str_contains($perm, 'destroy'); // Exclude delete operations
+        });
+        if (!empty($adminPermissions)) {
+            $admin->permissions()->sync(Permission::whereIn('name', $adminPermissions)->pluck('id'));
+        }
 
         // Editor gets view and update only
-        $editor->givePermissionTo('users.view');
-        $editor->givePermissionTo('users.update');
+        $editorPermissions = array_filter($userPermissions, function($perm) {
+            return str_contains($perm, 'index') || str_contains($perm, 'show') || str_contains($perm, 'update');
+        });
+        if (!empty($editorPermissions)) {
+            $editor->permissions()->sync(Permission::whereIn('name', $editorPermissions)->pluck('id'));
+        }
 
         // Viewer gets view only
-        $viewer->givePermissionTo('users.view');
+        $viewerPermissions = array_filter($userPermissions, function($perm) {
+            return str_contains($perm, 'index') || str_contains($perm, 'show');
+        });
+        if (!empty($viewerPermissions)) {
+            $viewer->permissions()->sync(Permission::whereIn('name', $viewerPermissions)->pluck('id'));
+        }
 
         // Create sample users with different roles
         $superAdminUser = User::firstOrCreate(

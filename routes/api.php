@@ -82,11 +82,13 @@ Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
 
 // Test simple auth endpoint
 Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $request) {
+    $user = $request->user();
     return response()->json([
         'message' => 'Auth working',
-        'user' => $request->user()->name,
-        // 'roles' => $user->roles->pluck('name'),
-        // 'can_view_users' => $canViewUsers
+        'user' => $user->name,
+        'roles' => $user->roles->pluck('name'),
+        'permissions' => $user->getAllPermissions()->pluck('name'),
+        'can_view_users' => $user->can('user.index')
     ]);
 });
 

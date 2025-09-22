@@ -14,6 +14,16 @@ class Permission extends Model implements PermissionContract
         'description',
         'resource',
         'action',
+        'uri',
+        'method',
+        'route_name',
+        'is_api_route',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_api_route' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     /**

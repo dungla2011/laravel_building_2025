@@ -25,17 +25,24 @@
                 <h6 class="small text-uppercase text-muted mb-2">Available Permissions</h6>
                 @foreach($permissions as $permission)
                 <div class="mb-1">
-                    <span class="permission-badge">{{ $permission->name }}</span>
+                    <span class="permission-badge ">
+                    {{ $permission->name }}
+                </span>
                     <div class="small text-muted">{{ $permission->description }}</div>
                 </div>
                 @endforeach
             </div>
             
             <div>
+                <hr>    
                 <h6 class="small text-uppercase text-muted mb-2">Roles</h6>
                 @foreach($roles as $role)
                 <div class="mb-2">
-                    <div>{{ $role->display_name }}</div>
+                    <div>
+                    <b>
+                    {{ $role->display_name }}
+</b>
+                    </div>
                     <div class="small text-muted">{{ $role->description }}</div>
                     <div class="mt-1">
                         @foreach($role->permissions as $permission)
