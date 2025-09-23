@@ -404,6 +404,17 @@ class RolePermissionIntegrationTest extends TestCase
         
         $response = $this->makeRequest("{$this->baseUrl}/admin/role-permissions/update", 'POST', $data, $headers, true);
         
+        // Debug logging for CI
+        if ($response['http_code'] !== 200 || !isset($response['data']['success']) || !$response['data']['success']) {
+            echo "      ⚠️  Permission toggle failed: HTTP {$response['http_code']}\n";
+            if (isset($response['data']['message'])) {
+                echo "         Message: {$response['data']['message']}\n";
+            }
+            if (isset($response['body']) && strlen($response['body']) < 200) {
+                echo "         Response: " . trim($response['body']) . "\n";
+            }
+        }
+        
         return $response['http_code'] === 200 && 
                isset($response['data']['success']) && 
                $response['data']['success'];
@@ -522,10 +533,15 @@ class RolePermissionIntegrationTest extends TestCase
         
         // Step 1: Enable all permissions
         echo "🔓 Step 1: Enabling all permissions for {$userData['display_name']}...\n";
+        echo "   Role ID: $currentRoleId\n";
         $enabledCount = 0;
         foreach ($usersPermissions as $name => $id) {
+            echo "   Enabling: $name (ID: $id)... ";
             if ($this->togglePermission($currentRoleId, $id, true)) {
                 $enabledCount++;
+                echo "✅\n";
+            } else {
+                echo "❌\n";
             }
         }
         echo "✅ Successfully enabled $enabledCount/" . count($usersPermissions) . " permissions\n\n";
