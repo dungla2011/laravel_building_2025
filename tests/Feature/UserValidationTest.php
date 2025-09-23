@@ -56,13 +56,26 @@ class UserValidationTest extends TestCase
 
     private function determineServerPort(): int
     {
-        return (app()->environment('testing') && !$this->isLocalDevelopment()) ? 8000 : 12368;
-    }
-
-    private function isLocalDevelopment(): bool
-    {
-        return file_exists(base_path('.env')) && 
-               strpos(file_get_contents(base_path('.env')), 'APP_ENV=local') !== false;
+        // Check if we're in CI environment
+        if (getenv('CI') || getenv('GITHUB_ACTIONS') || getenv('RUNNER_OS')) {
+            echo "🔍 Detected CI environment, using port 8000\n";
+            return 8000;
+        }
+        
+        // Check if port 8000 is already in use (could be CI or local server)
+        $output = [];
+        exec('netstat -an 2>/dev/null | grep ":8000"', $output);
+        
+        foreach ($output as $line) {
+            if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
+                echo "🔍 Port 8000 in use, assuming CI environment\n";
+                return 8000;
+            }
+        }
+        
+        // Default to local testing port
+        echo "🔍 Local environment detected, using port 12368\n";
+        return 12368;
     }
 
     private function checkAndRestartServer(): void
