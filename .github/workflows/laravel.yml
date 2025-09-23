@@ -58,13 +58,9 @@ jobs:
 
     - name: Set Testing Environment
       run: |
-        # Update .env.testing for CI environment
+        # Update .env.testing for CI environment only
         sed -i 's|APP_URL=.*|APP_URL=http://localhost:8000|' .env.testing
         sed -i 's|DB_DATABASE=.*|DB_DATABASE=/home/runner/work/laravel_building_2025/laravel_building_2025/database/testing.sqlite|' .env.testing
-        
-        # Add CI-specific configurations if not present
-        grep -q "PERMISSION_VALIDATION_ENABLED" .env.testing || echo "PERMISSION_VALIDATION_ENABLED=true" >> .env.testing
-        grep -q "TELESCOPE_ENABLED" .env.testing || echo "TELESCOPE_ENABLED=false" >> .env.testing
 
     - name: Clear Config Cache
       run: |
