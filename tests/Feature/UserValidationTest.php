@@ -300,7 +300,7 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Test User',
                     'email' => $this->makeUniqueEmail('noconfirm'),
-                    'password' => 'validpassword123'
+                    'password' => 'ValidPassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -309,8 +309,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Test User',
                     'email' => $this->makeUniqueEmail('mismatch'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'different123'
+                    'password' => 'StrongPassword123!',
+                    'password_confirmation' => 'DifferentPassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -361,8 +361,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Test User',
                     'email' => 'invalid-email-format',
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'InvalidPassword123!',
+                    'password_confirmation' => 'InvalidPassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -371,8 +371,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Test User',
                     'email' => 'user@',
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'NoDomainPassword123!',
+                    'password_confirmation' => 'NoDomainPassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -381,8 +381,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Test User',
                     'email' => 'user with spaces@example.com',
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'SpacesPassword123!',
+                    'password_confirmation' => 'SpacesPassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -391,8 +391,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Duplicate User',
                     'email' => 'admin@example.com', // This already exists in seeded data
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'DuplicatePassword123!',
+                    'password_confirmation' => 'DuplicatePassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -442,8 +442,8 @@ class UserValidationTest extends TestCase
                 'name' => 'Missing name field',
                 'data' => [
                     'email' => $this->makeUniqueEmail('noname'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'MissingNamePassword123!',
+                    'password_confirmation' => 'MissingNamePassword123!'
                 ],
                 'expected_status' => 422
             ],
@@ -451,8 +451,8 @@ class UserValidationTest extends TestCase
                 'name' => 'Missing email field',
                 'data' => [
                     'name' => 'No Email User',
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'MissingEmailPassword123!',
+                    'password_confirmation' => 'MissingEmailPassword123!'
                 ],
                 'expected_status' => 422
             ],
