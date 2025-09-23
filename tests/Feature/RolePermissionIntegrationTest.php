@@ -507,7 +507,7 @@ class RolePermissionIntegrationTest extends TestCase
         return ['passed' => $passed, 'total' => $total];
     }
 
-    /** @test */
+    #[Test]
     public function viewer_role_can_access_api_endpoints_with_permissions_enabled()
     {
         $testRole = 'viewer';
@@ -564,7 +564,7 @@ class RolePermissionIntegrationTest extends TestCase
         echo "✅ {$userData['display_name']} with permissions can access API endpoints!\n\n";
     }
 
-    /** @test */
+    #[Test]
     public function viewer_role_cannot_access_api_endpoints_with_permissions_disabled()
     {
         $testRole = 'viewer';
@@ -624,7 +624,7 @@ class RolePermissionIntegrationTest extends TestCase
         $this->assertEquals(count($usersPermissions), $restoredCount, 'All permissions should be restored');
     }
 
-    /** @test */
+    #[Test]
     public function admin_role_can_access_api_endpoints_with_permissions_enabled()
     {
         $testRole = 'super-admin';
@@ -665,7 +665,7 @@ class RolePermissionIntegrationTest extends TestCase
         echo "✅ {$userData['display_name']} test completed successfully!\n\n";
     }
 
-    /** @test */
+    #[Test]
     public function server_is_running_and_responsive()
     {
         echo "\n🧪 TEST: Server health check\n";
@@ -679,7 +679,7 @@ class RolePermissionIntegrationTest extends TestCase
         echo "✅ Server is running and responsive\n";
     }
 
-    /** @test */
+    #[Test]
     public function database_is_properly_seeded()
     {
         echo "\n🧪 TEST: Database seeding verification\n";
