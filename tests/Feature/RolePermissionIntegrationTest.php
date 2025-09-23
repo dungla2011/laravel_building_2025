@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Tests\TestCase;
+use Tests\Traits\HttpTestTrait;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Exception;
@@ -15,13 +16,8 @@ use Exception;
  */
 class RolePermissionIntegrationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, HttpTestTrait;
 
-    private string $baseUrl;
-    private int $serverPort;
-    private string $cookieJar;
-    private ?string $userToken = null;
-    private ?string $csrfToken = null;
     private ?array $rolePermissionData = null;
     private array $testUsers = [
         'super-admin' => ['email' => 'superadmin@example.com', 'display_name' => 'Super Administrator'],
@@ -34,265 +30,36 @@ class RolePermissionIntegrationTest extends TestCase
     {
         parent::setUp();
         
-        // Determine server port based on environment
-        $this->serverPort = $this->determineServerPort();
-        $this->baseUrl = "http://127.0.0.1:{$this->serverPort}";
-        
-        // Create cookie jar for session management
-        $this->cookieJar = tempnam(sys_get_temp_dir(), 'phpunit_cookies_test');
-        
-        // Start Laravel server and prepare database
-        $this->checkAndRestartServer();
+        $this->initializeHttpTest('phpunit_cookies_test');
         
         echo "✅ PHPUnit Feature Test setup completed\n";
     }
 
     protected function tearDown(): void
     {
-        // Clean up cookie jar
-        if (file_exists($this->cookieJar)) {
-            unlink($this->cookieJar);
-        }
-        
+        $this->cleanupHttpTest();
         parent::tearDown();
     }
 
-    /**
-     * Determine which port to use for testing
-     * CI uses 8000, local testing uses 12368
-     */
-    private function determineServerPort(): int
-    {
-        // Check if we're in CI environment
-        if (getenv('CI') || getenv('GITHUB_ACTIONS') || getenv('RUNNER_OS')) {
-            echo "🔍 Detected CI environment, using port 8000\n";
-            return 8000;
-        }
-        
-        // Check if port 8000 is already in use (likely CI or existing server)
-        $output = [];
-        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
-        
-        if ($isWindows) {
-            exec('netstat -ano | findstr ":8000"', $output);
-        } else {
-            exec('netstat -tuln | grep :8000', $output);
-        }
-        
-        foreach ($output as $line) {
-            if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
-                echo "🔍 Port 8000 in use, assuming CI environment\n";
-                return 8000;
-            }
-        }
-        
-        // Default to local testing port
-        echo "🔍 Local environment detected, using port 12368\n";
-        return 12368;
-    }
+
+
+
+
+
 
     /**
-     * Check if port 12368 is in use and restart Laravel server if needed
+     * Adapter method to maintain backward compatibility with role permission requests
      */
-    private function checkAndRestartServer(): void
+    private function makeRolePermissionRequest(string $url, string $method = 'GET', array $data = [], array $headers = []): array
     {
-        echo "🔍 Checking Laravel server status for PHPUnit...\n";
-        
-        // Always run database migrations and seeders first
-        echo "🗄️  Preparing database (fresh migration + seeding)...\n";
-        
-        // Create SQLite database file if needed for testing
-        $testingDbPath = 'database/testing.sqlite';
-        if (!file_exists($testingDbPath)) {
-            echo "   Creating testing SQLite database file...\n";
-            if (!is_dir('database')) {
-                mkdir('database', 0755, true);
-            }
-            touch($testingDbPath);
-            echo "   ✅ Created $testingDbPath\n";
-        } else {
-            echo "   ✅ Testing SQLite database exists\n";
-        }
-        
-        // Run fresh migration with seeding
-        exec("php artisan migrate:fresh --seed --force --env=testing 2>&1", $output, $exitCode);
-        
-        if ($exitCode === 0) {
-            echo "   ✅ Fresh database migration and seeding completed\n";
-        } else {
-            echo "   ⚠️  Database preparation warnings:\n";
-            foreach (array_slice($output, -5) as $line) {
-                echo "      $line\n";
-            }
-        }
-        
-        // Check if the determined port is in use
-        $output = [];
-        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
-        
-        if ($isWindows) {
-            exec("netstat -ano | findstr \":{$this->serverPort}\"", $output);
-        } else {
-            exec("netstat -tuln | grep :{$this->serverPort}", $output);
-        }
-        
-        $serverRunning = false;
-        $processId = null;
-        
-        // Parse netstat output to find listening process
-        foreach ($output as $line) {
-            if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
-                $serverRunning = true;
-                if ($isWindows && preg_match('/\s+(\d+)$/', $line, $matches)) {
-                    $processId = $matches[1];
-                }
-                break;
-            }
-        }
-        
-        if ($serverRunning) {
-            echo "⚠️  Port {$this->serverPort} is in use";
-            if ($processId) {
-                echo " (PID: $processId)";
-            }
-            echo "\n";
-            
-            // Test if it's actually Laravel responding
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:{$this->serverPort}");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-            curl_setopt($ch, CURLOPT_NOBODY, true);
-            
-            $result = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            
-            if ($httpCode === 200) {
-                echo "✅ Laravel server is responding on port {$this->serverPort}\n";
-                return;
-            } else {
-                echo "❌ Port {$this->serverPort} occupied but not responding to Laravel requests\n";
-            }
-            
-            // Kill the process to restart with fresh code
-            if ($processId && $isWindows) {
-                echo "🔄 Killing process $processId to restart with fresh code...\n";
-                exec("taskkill /PID $processId /F 2>nul", $killOutput);
-                sleep(2); // Wait for process to terminate
-            }
-        }
-        
-        // Start Laravel development server (only if not in CI - CI starts its own server)
-        if (!getenv('CI') && !getenv('GITHUB_ACTIONS')) {
-            echo "🚀 Starting Laravel development server for PHPUnit...\n";
-            
-            // Use proc_open for better cross-platform background process handling
-            $descriptorspec = [
-                0 => ['pipe', 'r'],  // stdin
-                1 => ['pipe', 'w'],  // stdout  
-                2 => ['pipe', 'w']   // stderr
-            ];
-            
-            $command = "php artisan serve --port={$this->serverPort} --env=testing";
-            $process = proc_open($command, $descriptorspec, $pipes);
-            
-            if (is_resource($process)) {
-                // Close pipes to detach process
-                fclose($pipes[0]);
-                fclose($pipes[1]); 
-                fclose($pipes[2]);
-                
-                echo "✅ Server process started in background\n";
-            } else {
-                echo "❌ Failed to start server process\n";
-            }
-        } else {
-            echo "🔄 Using existing server in CI environment\n";
-        }
-        
-        // Wait for server to start and verify
-        $maxAttempts = 10;
-        $attempts = 0;
-        
-        while ($attempts < $maxAttempts) {
-            sleep(1);
-            $attempts++;
-            
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:{$this->serverPort}");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 2);
-            curl_setopt($ch, CURLOPT_NOBODY, true);
-            
-            $result = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            
-            if ($httpCode === 200) {
-                echo "✅ Laravel server started successfully (attempt $attempts/$maxAttempts)\n";
-                return;
-            }
-            
-            echo "⏳ Waiting for server to start (attempt $attempts/$maxAttempts)...\n";
-        }
-        
-        $this->fail("❌ Failed to start Laravel server after $maxAttempts attempts");
-    }
-
-    /**
-     * Make HTTP request using CURL (same as standalone test)
-     */
-    private function makeRequest(string $url, string $method = 'GET', $data = null, array $headers = [], bool $useCookies = false): array
-    {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        
-        if ($useCookies) {
-            curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookieJar);
-            curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookieJar);
-        }
-        
-        if ($data && in_array($method, ['POST', 'PUT', 'PATCH'])) {
-            if (is_array($data)) {
-                $isJson = false;
-                foreach ($headers as $header) {
-                    if (stripos($header, 'Content-Type: application/json') !== false) {
-                        $isJson = true;
-                        break;
-                    }
-                }
-                
-                if ($isJson) {
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-                } else {
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-                }
-            } else {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            }
-        }
-        
-        if (!empty($headers)) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        }
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
+        $response = $this->makeRequest($url, $method, $data, $headers);
         
         return [
-            'success' => !$error,
-            'http_code' => $httpCode,
-            'body' => $response,
-            'data' => json_decode($response, true),
-            'error' => $error
+            'success' => $response && $response['http_code'] === 200,
+            'http_code' => $response['http_code'] ?? 500,
+            'body' => $response['body'] ?? '',
+            'data' => json_decode($response['body'] ?? '{}', true),
+            'error' => null
         ];
     }
 
@@ -304,7 +71,7 @@ class RolePermissionIntegrationTest extends TestCase
         echo "🔧 Setting up test environment for role: $testRole\n";
         
         // Initialize session
-        $response = $this->makeRequest("{$this->baseUrl}/admin/role-permissions", 'GET', null, [], true);
+        $response = $this->makeRolePermissionRequest("{$this->baseUrl}/admin/role-permissions", 'GET', []);
         $this->assertEquals(200, $response['http_code'], 'Failed to initialize session');
         
         // Get CSRF token
@@ -323,7 +90,7 @@ class RolePermissionIntegrationTest extends TestCase
         $userData = $this->testUsers[$testRole];
         $loginData = ['email' => $userData['email'], 'password' => 'password'];
         $headers = ['Content-Type: application/json', 'Accept: application/json'];
-        $response = $this->makeRequest("{$this->baseUrl}/api/login", 'POST', $loginData, $headers);
+        $response = $this->makeRolePermissionRequest("{$this->baseUrl}/api/login", 'POST', $loginData, $headers);
         
         $this->assertEquals(200, $response['http_code'], "Failed to login as {$userData['display_name']}");
         $this->assertArrayHasKey('token', $response['data'], 'Login response should contain token');
@@ -403,7 +170,7 @@ class RolePermissionIntegrationTest extends TestCase
             'X-Requested-With: XMLHttpRequest'
         ];
         
-        $response = $this->makeRequest("{$this->baseUrl}/admin/role-permissions/update", 'POST', $data, $headers, true);
+        $response = $this->makeRolePermissionRequest("{$this->baseUrl}/admin/role-permissions/update", 'POST', $data, $headers);
         
         // Debug logging for CI
         if ($response['http_code'] !== 200 || !isset($response['data']['success']) || !$response['data']['success']) {
@@ -472,10 +239,10 @@ class RolePermissionIntegrationTest extends TestCase
                 'Content-Type: application/json'
             ];
             
-            $response = $this->makeRequest(
+            $response = $this->makeRolePermissionRequest(
                 "{$this->baseUrl}/api/{$config['endpoint']}", 
                 $config['method'], 
-                $config['data'] ?? null, 
+                $config['data'] ?? [], 
                 $headers
             );
             
@@ -670,7 +437,7 @@ class RolePermissionIntegrationTest extends TestCase
     {
         echo "\n🧪 TEST: Server health check\n";
         
-        $response = $this->makeRequest($this->baseUrl, 'GET');
+        $response = $this->makeRolePermissionRequest($this->baseUrl, 'GET');
         
         $this->assertEquals(200, $response['http_code'], 'Server should be responding on port 12368');
         $this->assertTrue($response['success'], 'Request should be successful');
