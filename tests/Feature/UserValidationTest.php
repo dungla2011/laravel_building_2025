@@ -94,14 +94,24 @@ class UserValidationTest extends TestCase
 
     private function prepareDatabaseForTesting(): void
     {
-        echo "🗄️  Checking database status...\n";
+        echo "🗄️  Preparing database (fresh migration + seeding)...\n";
         
         $dbPath = database_path('testing.sqlite');
         if (file_exists($dbPath)) {
             echo "   ✅ Testing SQLite database exists\n";
         }
         
-        echo "   ✅ Database preparation completed\n";
+        // Run fresh migrations with seeding to ensure clean database state
+        exec("php artisan migrate:fresh --seed --force --env=testing 2>&1", $output, $exitCode);
+        
+        if ($exitCode !== 0) {
+            echo "   ⚠️  Migration/seeding had issues, but continuing...\n";
+            if (count($output) > 0) {
+                echo "   Output: " . implode("\n   ", array_slice($output, -3)) . "\n";
+            }
+        } else {
+            echo "   ✅ Fresh database migration and seeding completed\n";
+        }
     }
 
     private function isServerResponding(): bool
