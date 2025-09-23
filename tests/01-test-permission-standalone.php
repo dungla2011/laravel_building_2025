@@ -13,7 +13,7 @@
 
 class PermissionStandaloneTest
 {
-    private string $baseUrl = 'http://127.0.0.1:8000';
+    private string $baseUrl = 'http://127.0.0.1:12368';
     private string $cookieJar;
     private ?string $userToken = null;
     private ?string $csrfToken = null;
@@ -425,35 +425,207 @@ class PermissionStandaloneTest
     }
 }
 
-// Check if Laravel server is running
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:8000');
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-curl_setopt($ch, CURLOPT_NOBODY, true);
-
-$result = curl_exec($ch);
-$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-curl_close($ch);
-
-if ($httpCode !== 200) {
-    die("❌ Laravel server is not running on http://127.0.0.1:8000\nPlease run: php artisan serve\n");
+/**
+ * Check if port 12368 is in use and restart Laravel server if needed
+ */
+function checkAndRestartServer(string $envFlag = ''): void
+{
+    echo "🔍 Checking Laravel server status...\n";
+    
+    // Always run database migrations and seeders first
+    echo "🗄️  Preparing database (fresh migration + seeding)...\n";
+    
+    // Create SQLite database file if needed
+    if (strpos($envFlag, 'testing') !== false) {
+        $testingDbPath = 'database/testing.sqlite';
+        if (!file_exists($testingDbPath)) {
+            echo "   Creating testing SQLite database file...\n";
+            if (!is_dir('database')) {
+                mkdir('database', 0755, true);
+            }
+            touch($testingDbPath);
+            echo "   ✅ Created $testingDbPath\n";
+        } else {
+            echo "   ✅ Testing SQLite database exists\n";
+        }
+    } elseif (strpos($envFlag, 'local') !== false || empty($envFlag)) {
+        // Check for local SQLite database
+        $localDbPath = 'database/database.sqlite';
+        if (!file_exists($localDbPath)) {
+            echo "   Creating local SQLite database file...\n";
+            if (!is_dir('database')) {
+                mkdir('database', 0755, true);
+            }
+            touch($localDbPath);
+            echo "   ✅ Created $localDbPath\n";
+        } else {
+            echo "   ✅ Local SQLite database exists\n";
+        }
+    }
+    
+    // Run fresh migration with seeding in one command
+    exec("php artisan migrate:fresh --seed --force$envFlag 2>&1", $output, $exitCode);
+    
+    if ($exitCode === 0) {
+        echo "   ✅ Fresh database migration and seeding completed\n";
+    } else {
+        echo "   ⚠️  Database preparation warnings:\n";
+        foreach (array_slice($output, -5) as $line) {
+            echo "      $line\n";
+        }
+    }
+    
+    // Check if port 12368 is in use
+    $output = [];
+    $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+    
+    if ($isWindows) {
+        exec('netstat -ano | findstr ":12368"', $output);
+    } else {
+        exec('netstat -tuln | grep :12368', $output);
+    }
+    
+    $serverRunning = false;
+    $processId = null;
+    
+    // Parse netstat output to find listening process
+    foreach ($output as $line) {
+        if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
+            $serverRunning = true;
+            if ($isWindows && preg_match('/\s+(\d+)$/', $line, $matches)) {
+                $processId = $matches[1];
+            }
+            break;
+        }
+    }
+    
+    if ($serverRunning) {
+        echo "⚠️  Port 12368 is in use";
+        if ($processId) {
+            echo " (PID: $processId)";
+        }
+        echo "\n";
+        
+        // Test if it's actually Laravel responding
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:12368');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200) {
+            echo "✅ Laravel server is responding on port 12368\n";
+            return;
+        } else {
+            echo "❌ Port 12368 occupied but not responding to Laravel requests\n";
+        }
+        
+        // Kill the process to restart with fresh code
+        if ($processId && $isWindows) {
+            echo "🔄 Killing process $processId to restart with fresh code...\n";
+            exec("taskkill /PID $processId /F 2>nul", $killOutput);
+            sleep(2); // Wait for process to terminate
+        }
+    }
+    
+    // Start Laravel development server
+    echo "🚀 Starting Laravel development server...\n";
+    
+    // Use proc_open for better cross-platform background process handling
+    $descriptorspec = [
+        0 => ['pipe', 'r'],  // stdin
+        1 => ['pipe', 'w'],  // stdout  
+        2 => ['pipe', 'w']   // stderr
+    ];
+    
+    $command = "php artisan serve --port=12368$envFlag";
+    $process = proc_open($command, $descriptorspec, $pipes);
+    
+    if (is_resource($process)) {
+        // Close pipes to detach process
+        fclose($pipes[0]);
+        fclose($pipes[1]); 
+        fclose($pipes[2]);
+        
+        // Don't wait for process to finish (run in background)
+        // proc_close($process); // Commented out to keep it running
+        
+        echo "✅ Server process started in background\n";
+    } else {
+        echo "❌ Failed to start server process\n";
+    }
+    
+    // Wait for server to start and verify
+    $maxAttempts = 10;
+    $attempts = 0;
+    
+    while ($attempts < $maxAttempts) {
+        sleep(1);
+        $attempts++;
+        
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:12368');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 2);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($httpCode === 200) {
+            echo "✅ Laravel server started successfully (attempt $attempts/$maxAttempts)\n";
+            return;
+        }
+        
+        echo "⏳ Waiting for server to start (attempt $attempts/$maxAttempts)...\n";
+    }
+    
+    die("❌ Failed to start Laravel server after $maxAttempts attempts\nPlease manually run: php artisan serve\n");
 }
 
-echo "✅ Laravel server is running\n\n";
-
-// Check command line arguments for role selection
+// Parse command line arguments
 $role = 'super-admin'; // default
-if (isset($argv[1])) {
-    $role = $argv[1];
+$environment = 'local'; // default
+$envFlag = '';
+
+// Process arguments
+for ($i = 1; $i < count($argv); $i++) {
+    $arg = $argv[$i];
+    
+    if (strpos($arg, '--env=') === 0) {
+        $environment = substr($arg, 6);
+    } elseif ($arg === '--env' && isset($argv[$i + 1])) {
+        $environment = $argv[$i + 1];
+        $i++; // Skip next argument as it's the environment value
+    } elseif (!strpos($arg, '--')) {
+        $role = $arg; // Role argument (no flag)
+    }
 }
 
-// Display available roles
+// Set environment flag for artisan commands
+if ($environment !== 'local') {
+    $envFlag = " --env=$environment";
+}
+
+// Display configuration
 $availableRoles = ['super-admin', 'admin', 'editor', 'viewer'];
 echo "Available roles: " . implode(', ', $availableRoles) . "\n";
 echo "Testing role: $role\n";
-echo "Usage: php " . basename(__FILE__) . " [role]\n";
-echo "Example: php " . basename(__FILE__) . " editor\n\n";
+echo "Environment: $environment\n";
+echo "Usage: php " . basename(__FILE__) . " [role] [--env=environment]\n";
+echo "Examples:\n";
+echo "  php " . basename(__FILE__) . " editor\n";
+echo "  php " . basename(__FILE__) . " viewer --env=testing\n";
+echo "  php " . basename(__FILE__) . " admin --env=local\n\n";
+
+// Check and restart server if needed
+checkAndRestartServer($envFlag);
+echo "\n";
 
 // Run the test
 try {

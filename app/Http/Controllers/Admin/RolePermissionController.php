@@ -37,6 +37,9 @@ class RolePermissionController extends Controller
         // Get current role-permission matrix
         $rolePermissions = $this->getRolePermissionsMatrix();
 
+        // dump($rolePermissions); // Debug line to inspect the matrix
+
+
         return view('admin.role-permissions.index', compact('roles', 'permissionGroups', 'rolePermissions'));
     }
 
