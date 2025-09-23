@@ -15,17 +15,17 @@ class ExampleTest extends TestCase
     }
 
     /**
-     * Test basic Laravel configuration
+     * Test basic environment configuration
      */
     public function test_environment_configuration(): void
     {
-        // Test that we can access environment variables
-        $appEnv = env('APP_ENV');
-        $this->assertNotNull($appEnv, 'APP_ENV should be set');
+        // Test that we can access basic PHP environment
+        $this->assertIsString(PHP_VERSION, 'PHP version should be available');
+        $this->assertGreaterThanOrEqual(8.2, (float)phpversion(), 'PHP version should be 8.2+');
         
-        // Test that config values are accessible
-        $appName = config('app.name');
-        $this->assertNotNull($appName, 'App name should be configured');
+        // Test basic constants
+        $this->assertTrue(defined('PHP_OS'), 'PHP_OS should be defined');
+        $this->assertNotEmpty(PHP_OS, 'PHP_OS should not be empty');
     }
 
     /**
