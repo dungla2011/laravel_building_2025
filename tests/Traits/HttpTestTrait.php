@@ -199,34 +199,82 @@ trait HttpTestTrait
      */
     protected function getCsrfToken(): void
     {
-        // Try to get CSRF from admin page first
-        $response = $this->makeRequest($this->baseUrl . '/admin/role-permissions', 'GET');
+        $routes_to_try = [
+            '/admin/role-permissions' => 'admin role permissions',
+            '/admin/field-permissions' => 'admin field permissions', 
+            '/admin/users' => 'admin users',
+            '/' => 'homepage'
+        ];
         
-        if ($response && isset($response['body'])) {
-            // Look for meta tag CSRF token
-            if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
-                $this->csrfToken = $matches[1];
-                return;
-            }
+        foreach ($routes_to_try as $route => $description) {
+            echo "🔍 Trying to get CSRF token from {$description} ({$route})...\n";
             
-            // Fallback: look for form CSRF token
-            if (preg_match('/name="_token" value="([^"]+)"/', $response['body'], $matches)) {
-                $this->csrfToken = $matches[1];
-                return;
+            $response = $this->makeRequest($this->baseUrl . $route, 'GET');
+            
+            if ($response && isset($response['body']) && $response['http_code'] == 200) {
+                echo "   ✅ Got response (HTTP {$response['http_code']}, " . strlen($response['body']) . " bytes)\n";
+                
+                // Look for meta tag CSRF token first (most reliable)
+                if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
+                    $this->csrfToken = $matches[1];
+                    echo "   ✅ CSRF token found in meta tag: " . substr($this->csrfToken, 0, 10) . "...\n";
+                    return;
+                }
+                
+                // Fallback: look for form CSRF token
+                if (preg_match('/name="_token" value="([^"]+)"/', $response['body'], $matches)) {
+                    $this->csrfToken = $matches[1];
+                    echo "   ✅ CSRF token found in form input: " . substr($this->csrfToken, 0, 10) . "...\n";
+                    return;
+                }
+                
+                echo "   ⚠️ No CSRF token found in response body\n";
+                
+                // Debug: show first 500 chars of response in CI to help troubleshooting
+                if (isset($_ENV['CI']) || isset($_ENV['GITHUB_ACTIONS']) || isset($_ENV['PHPUNIT_TESTING'])) {
+                    echo "   🔍 Response preview: " . substr($response['body'], 0, 500) . "...\n";
+                    
+                    // Check if response looks like HTML at all
+                    if (stripos($response['body'], '<html') === false && stripos($response['body'], '<!DOCTYPE') === false) {
+                        echo "   ⚠️ Response doesn't appear to be HTML\n";
+                    }
+                }
+            } else {
+                echo "   ❌ Failed request - HTTP " . ($response['http_code'] ?? 'unknown') . "\n";
+                if ($response && isset($response['body']) && strlen($response['body']) < 200) {
+                    echo "      Response: " . trim($response['body']) . "\n";
+                }
             }
         }
         
-        // Fallback: try homepage
-        $response = $this->makeRequest($this->baseUrl, 'GET');
-        if ($response && isset($response['body'])) {
-            if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
-                $this->csrfToken = $matches[1];
-                return;
+        // Final fallback: try to generate a token via Laravel's built-in method
+        echo "🔍 Attempting direct CSRF token generation via Laravel...\n";
+        try {
+            // Make a simple POST request to trigger CSRF token in session
+            $tokenResponse = $this->makeRequest($this->baseUrl . '/api/login', 'POST', 
+                ['email' => 'nonexistent@example.com', 'password' => 'wrong'],
+                ['Content-Type: application/json', 'Accept: application/json']
+            );
+            
+            if ($tokenResponse && isset($tokenResponse['body'])) {
+                $responseData = json_decode($tokenResponse['body'], true);
+                if (isset($responseData['errors']) && isset($responseData['message'])) {
+                    echo "   ✅ API responded with validation errors (good sign)\n";
+                    // At this point, session should be established, try getting CSRF again
+                    $response = $this->makeRequest($this->baseUrl . '/admin/role-permissions', 'GET');
+                    if ($response && preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
+                        $this->csrfToken = $matches[1];
+                        echo "   ✅ CSRF token obtained after session establishment: " . substr($this->csrfToken, 0, 10) . "...\n";
+                        return;
+                    }
+                }
             }
+        } catch (Exception $e) {
+            echo "   ⚠️ Direct token generation failed: " . $e->getMessage() . "\n";
         }
         
         if (!$this->csrfToken) {
-            throw new Exception('Failed to obtain CSRF token from any source');
+            throw new Exception('Failed to obtain CSRF token from any source. Routes tried: ' . implode(', ', array_keys($routes_to_try)));
         }
     }
 
