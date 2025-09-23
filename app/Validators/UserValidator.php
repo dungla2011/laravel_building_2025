@@ -15,6 +15,15 @@ class UserValidator
      */
     public static function createRules(): array
     {
+        // If validation is disabled in environment, return minimal rules
+        if (env('DISABLE_USER_VALIDATION', false)) {
+            return [
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users,email',
+                'password' => 'required|string|min:6|confirmed',
+            ];
+        }
+
         return [
             'name' => [
                 'required',
@@ -51,6 +60,22 @@ class UserValidator
      */
     public static function updateRules(?int $userId = null): array
     {
+        // If validation is disabled in environment, return minimal rules
+        if (env('DISABLE_USER_VALIDATION', false)) {
+            return [
+                'name' => 'sometimes|required|string|max:255',
+                'email' => [
+                    'sometimes',
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    Rule::unique('users')->ignore($userId)
+                ],
+                'password' => 'sometimes|nullable|string|min:6|confirmed',
+            ];
+        }
+
         return [
             'name' => [
                 'sometimes',
@@ -90,6 +115,16 @@ class UserValidator
      */
     public static function batchCreateRules(): array
     {
+        // If validation is disabled in environment, return minimal rules
+        if (env('DISABLE_USER_VALIDATION', false)) {
+            return [
+                'resources' => 'required|array|min:1|max:100',
+                'resources.*.name' => 'required|string|max:255',
+                'resources.*.email' => 'required|string|email|max:255|distinct',
+                'resources.*.password' => 'required|string|min:6',
+            ];
+        }
+
         return [
             'resources' => 'required|array|min:1|max:100', // Limit batch size
             'resources.*.name' => [

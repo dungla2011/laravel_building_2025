@@ -23,7 +23,27 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        die("1111");
         $userId = $this->route('user'); // Get user ID from route parameter
+        
+        // If validation is disabled in environment, return minimal rules
+        if (env('DISABLE_USER_VALIDATION', false)) {
+
+            
+            return [
+                'name' => 'sometimes|required|string|max:255',
+                'email' => [
+                    'sometimes',
+                    'required',
+                    'string',
+                    'email',
+                    'max:255',
+                    Rule::unique('users')->ignore($userId)
+                ],
+                'password' => 'sometimes|nullable|string|min:6',
+                'password_confirmation' => 'required_with:password|same:password'
+            ];
+        }
         
         return [
             'name' => [

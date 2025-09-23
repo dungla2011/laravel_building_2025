@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rule;
 use App\Rules\NoForbiddenWords;
 use App\Rules\ValidEmailDomain;
 
@@ -24,6 +25,16 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        // If validation is disabled in environment, return minimal rules
+        if (env('DISABLE_USER_VALIDATION', false)) {
+            return [
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users,email',
+                'password' => 'required|string|min:6',
+                'password_confirmation' => 'required_with:password|same:password'
+            ];
+        }
+
         return [
             'name' => [
                 'required',

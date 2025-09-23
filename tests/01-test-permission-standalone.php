@@ -311,36 +311,36 @@ class PermissionStandaloneTest
     {
         $endpoints = [
             ['endpoint' => 'users', 'method' => 'GET', 'name' => 'List users'],
-            ['endpoint' => 'users/1', 'method' => 'GET', 'name' => 'Show user'],
+            ['endpoint' => 'users/2', 'method' => 'GET', 'name' => 'Show user'],
             ['endpoint' => 'users/search', 'method' => 'POST', 'data' => ['filters' => []], 'name' => 'Search users'],
             ['endpoint' => 'users/batch', 'method' => 'POST', 'data' => [
                 'resources' => [
-                    '1' => [
-                        'name' => 'New Batch User 1',
-                        'email' => 'newbatch1_' . uniqid() . '@example.com',
-                        'password' => 'StrongPass123!'
-                    ],
                     '2' => [
-                        'name' => 'New Batch User 2', 
+                        'name' => 'New Batch User',
+                        'email' => 'newbatch1_' . uniqid() . '@example.com',
+                        'password' => 'Strong1Pass123!'
+                    ],
+                    '3' => [
+                        'name' => 'New Batch User hai', 
                         'email' => 'newbatch2_' . uniqid() . '@example.com',
-                        'password' => 'StrongPass456@'
+                        'password' => 'Strong1Pass456@'
                     ]
                 ]
             ], 'name' => 'Batch create users'],
             ['endpoint' => 'users/batch', 'method' => 'PATCH', 'data' => [
                 'resources' => [
-                    '1' => [
-                        'name' => 'Updated User 1 via Batch PATCH',
+                    '2' => [
+                        'name' => 'Updated User via Batch PATCH',
                         'email' => 'updatedbatch1_' . uniqid() . '@example.com'
                     ],
-                    '2' => [
-                        'name' => 'Updated User 2 via Batch PATCH', 
+                    '3' => [
+                        'name' => 'Updated User via Batch PATCH hai', 
                         'email' => 'updatedbatch2_' . uniqid() . '@example.com'
                     ]
                 ]
             ], 'name' => 'Batch update users'],
             ['endpoint' => 'users', 'method' => 'POST', 'data' => ['name' => 'Test User', 'email' => 'test_' . uniqid() . '@example.com', 'password' => 'TestPass123!'], 'name' => 'Create user'],
-            ['endpoint' => 'users/1', 'method' => 'PUT', 'data' => ['name' => 'Updated User'], 'name' => 'Update user'],
+            ['endpoint' => 'users/2', 'method' => 'PUT', 'data' => ['name' => 'Updated User'], 'name' => 'Update user'],
         ];
         
         $passed = 0;
