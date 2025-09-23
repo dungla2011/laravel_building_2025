@@ -55,6 +55,11 @@ jobs:
 
     - name: Set Testing Environment
       run: |
+        cp .env.testing .env.testing.backup || true
+        echo "APP_NAME=Laravel" > .env.testing
+        echo "APP_ENV=testing" >> .env.testing
+        echo "APP_DEBUG=true" >> .env.testing
+        echo "APP_URL=http://localhost:8000" >> .env.testing
         echo "DB_CONNECTION=sqlite" >> .env.testing
         echo "DB_DATABASE=database/testing.sqlite" >> .env.testing
         echo "CACHE_DRIVER=array" >> .env.testing
@@ -63,6 +68,7 @@ jobs:
         echo "MAIL_MAILER=array" >> .env.testing
         echo "TELESCOPE_ENABLED=false" >> .env.testing
         echo "PERMISSION_VALIDATION_ENABLED=true" >> .env.testing
+        echo "LOG_CHANNEL=stack" >> .env.testing
 
     - name: Run Database Migrations
       run: php artisan migrate --env=testing --force
