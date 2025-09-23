@@ -81,8 +81,10 @@ jobs:
     - name: Clear Config Cache
       run: |
         php artisan config:clear
-        php artisan config:cache --env=testing
         php artisan route:clear
+        php artisan view:clear
+        php artisan cache:clear
+        php artisan config:cache --env=testing
 
     - name: Run Database Migrations
       run: php artisan migrate --env=testing --force
