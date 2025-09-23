@@ -45,7 +45,10 @@ jobs:
       run: php artisan key:generate
 
     - name: Directory Permissions
-      run: chmod -R 777 storage bootstrap/cache
+      run: |
+        chmod -R 777 storage bootstrap/cache
+        mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views
+        chmod -R 777 storage
 
     - name: Create Database Directory
       run: mkdir -p database
@@ -55,13 +58,17 @@ jobs:
 
     - name: Set Testing Environment
       run: |
-        cp .env.testing .env.testing.backup || true
+        # Get APP_KEY from main .env file
+        APP_KEY=$(grep "^APP_KEY=" .env | cut -d '=' -f2-)
+        
+        # Create clean .env.testing
         echo "APP_NAME=Laravel" > .env.testing
         echo "APP_ENV=testing" >> .env.testing
+        echo "APP_KEY=$APP_KEY" >> .env.testing
         echo "APP_DEBUG=true" >> .env.testing
         echo "APP_URL=http://localhost:8000" >> .env.testing
-        echo "DB_CONNECTION=sqlite" >> .env.testing
-        echo "DB_DATABASE=database/testing.sqlite" >> .env.testing
+        echo "DB_CONNECTION=sqlite" >> .env.testing  
+        echo "DB_DATABASE=/home/runner/work/laravel_building_2025/laravel_building_2025/database/testing.sqlite" >> .env.testing
         echo "CACHE_DRIVER=array" >> .env.testing
         echo "QUEUE_CONNECTION=sync" >> .env.testing
         echo "SESSION_DRIVER=array" >> .env.testing
@@ -69,6 +76,13 @@ jobs:
         echo "TELESCOPE_ENABLED=false" >> .env.testing
         echo "PERMISSION_VALIDATION_ENABLED=true" >> .env.testing
         echo "LOG_CHANNEL=stack" >> .env.testing
+        echo "LOG_LEVEL=debug" >> .env.testing
+
+    - name: Clear Config Cache
+      run: |
+        php artisan config:clear
+        php artisan config:cache --env=testing
+        php artisan route:clear
 
     - name: Run Database Migrations
       run: php artisan migrate --env=testing --force
@@ -76,14 +90,43 @@ jobs:
     - name: Seed Database
       run: php artisan db:seed --env=testing --force
 
+    - name: Debug Environment
+      run: |
+        echo "=== Environment Check ==="
+        php artisan --version
+        echo "=== .env.testing Content ==="
+        cat .env.testing
+        echo "=== Database Check ==="
+        ls -la database/
+        echo "=== Storage Permissions ==="
+        ls -la storage/
+        echo "=== Test Database Connection ==="
+        php artisan migrate:status --env=testing || echo "Migration status failed"
+
     - name: Start Laravel Server (Background)
-      run: php artisan serve --port=8000 &
+      run: php artisan serve --port=8000 --env=testing &
       env:
         APP_ENV: testing
 
     - name: Wait for Server
       run: |
-        timeout 30 bash -c 'until curl -f http://localhost:8000; do sleep 1; done'
+        echo "Waiting for Laravel server to start..."
+        sleep 5
+        echo "Testing server response..."
+        for i in {1..10}; do
+          echo "Attempt $i/10..."
+          if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 | grep -q "200\|302"; then
+            echo "✅ Server is responding!"
+            break
+          fi
+          if [ $i -eq 10 ]; then
+            echo "❌ Server failed to respond after 10 attempts"
+            echo "=== Server Logs ==="
+            tail -20 storage/logs/laravel.log || echo "No Laravel log found"
+            exit 1
+          fi
+          sleep 3
+        done
 
     - name: Execute tests (Unit and Feature tests) via PHPUnit
       run: php artisan test --env=testing

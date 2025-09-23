@@ -16,7 +16,8 @@ class RolePermissionIntegrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private string $baseUrl = 'http://127.0.0.1:12368';
+    private string $baseUrl;
+    private int $serverPort;
     private string $cookieJar;
     private ?string $userToken = null;
     private ?string $csrfToken = null;
@@ -31,6 +32,10 @@ class RolePermissionIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        
+        // Determine server port based on environment
+        $this->serverPort = $this->determineServerPort();
+        $this->baseUrl = "http://127.0.0.1:{$this->serverPort}";
         
         // Create cookie jar for session management
         $this->cookieJar = tempnam(sys_get_temp_dir(), 'phpunit_cookies_test');
@@ -49,6 +54,40 @@ class RolePermissionIntegrationTest extends TestCase
         }
         
         parent::tearDown();
+    }
+
+    /**
+     * Determine which port to use for testing
+     * CI uses 8000, local testing uses 12368
+     */
+    private function determineServerPort(): int
+    {
+        // Check if we're in CI environment
+        if (getenv('CI') || getenv('GITHUB_ACTIONS') || getenv('RUNNER_OS')) {
+            echo "🔍 Detected CI environment, using port 8000\n";
+            return 8000;
+        }
+        
+        // Check if port 8000 is already in use (likely CI or existing server)
+        $output = [];
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        
+        if ($isWindows) {
+            exec('netstat -ano | findstr ":8000"', $output);
+        } else {
+            exec('netstat -tuln | grep :8000', $output);
+        }
+        
+        foreach ($output as $line) {
+            if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
+                echo "🔍 Port 8000 in use, assuming CI environment\n";
+                return 8000;
+            }
+        }
+        
+        // Default to local testing port
+        echo "🔍 Local environment detected, using port 12368\n";
+        return 12368;
     }
 
     /**
@@ -86,14 +125,14 @@ class RolePermissionIntegrationTest extends TestCase
             }
         }
         
-        // Check if port 12368 is in use
+        // Check if the determined port is in use
         $output = [];
         $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
         
         if ($isWindows) {
-            exec('netstat -ano | findstr ":12368"', $output);
+            exec("netstat -ano | findstr \":{$this->serverPort}\"", $output);
         } else {
-            exec('netstat -tuln | grep :12368', $output);
+            exec("netstat -tuln | grep :{$this->serverPort}", $output);
         }
         
         $serverRunning = false;
@@ -111,7 +150,7 @@ class RolePermissionIntegrationTest extends TestCase
         }
         
         if ($serverRunning) {
-            echo "⚠️  Port 12368 is in use";
+            echo "⚠️  Port {$this->serverPort} is in use";
             if ($processId) {
                 echo " (PID: $processId)";
             }
@@ -119,7 +158,7 @@ class RolePermissionIntegrationTest extends TestCase
             
             // Test if it's actually Laravel responding
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:12368');
+            curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:{$this->serverPort}");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 3);
             curl_setopt($ch, CURLOPT_NOBODY, true);
@@ -129,10 +168,10 @@ class RolePermissionIntegrationTest extends TestCase
             curl_close($ch);
             
             if ($httpCode === 200) {
-                echo "✅ Laravel server is responding on port 12368\n";
+                echo "✅ Laravel server is responding on port {$this->serverPort}\n";
                 return;
             } else {
-                echo "❌ Port 12368 occupied but not responding to Laravel requests\n";
+                echo "❌ Port {$this->serverPort} occupied but not responding to Laravel requests\n";
             }
             
             // Kill the process to restart with fresh code
@@ -143,28 +182,32 @@ class RolePermissionIntegrationTest extends TestCase
             }
         }
         
-        // Start Laravel development server
-        echo "🚀 Starting Laravel development server for PHPUnit...\n";
-        
-        // Use proc_open for better cross-platform background process handling
-        $descriptorspec = [
-            0 => ['pipe', 'r'],  // stdin
-            1 => ['pipe', 'w'],  // stdout  
-            2 => ['pipe', 'w']   // stderr
-        ];
-        
-        $command = "php artisan serve --port=12368 --env=testing";
-        $process = proc_open($command, $descriptorspec, $pipes);
-        
-        if (is_resource($process)) {
-            // Close pipes to detach process
-            fclose($pipes[0]);
-            fclose($pipes[1]); 
-            fclose($pipes[2]);
+        // Start Laravel development server (only if not in CI - CI starts its own server)
+        if (!getenv('CI') && !getenv('GITHUB_ACTIONS')) {
+            echo "🚀 Starting Laravel development server for PHPUnit...\n";
             
-            echo "✅ Server process started in background\n";
+            // Use proc_open for better cross-platform background process handling
+            $descriptorspec = [
+                0 => ['pipe', 'r'],  // stdin
+                1 => ['pipe', 'w'],  // stdout  
+                2 => ['pipe', 'w']   // stderr
+            ];
+            
+            $command = "php artisan serve --port={$this->serverPort} --env=testing";
+            $process = proc_open($command, $descriptorspec, $pipes);
+            
+            if (is_resource($process)) {
+                // Close pipes to detach process
+                fclose($pipes[0]);
+                fclose($pipes[1]); 
+                fclose($pipes[2]);
+                
+                echo "✅ Server process started in background\n";
+            } else {
+                echo "❌ Failed to start server process\n";
+            }
         } else {
-            echo "❌ Failed to start server process\n";
+            echo "🔄 Using existing server in CI environment\n";
         }
         
         // Wait for server to start and verify
@@ -176,7 +219,7 @@ class RolePermissionIntegrationTest extends TestCase
             $attempts++;
             
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:12368');
+            curl_setopt($ch, CURLOPT_URL, "http://127.0.0.1:{$this->serverPort}");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_TIMEOUT, 2);
             curl_setopt($ch, CURLOPT_NOBODY, true);
