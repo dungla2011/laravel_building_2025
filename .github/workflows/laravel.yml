@@ -69,9 +69,9 @@ jobs:
         echo "APP_URL=http://localhost:8000" >> .env.testing
         echo "DB_CONNECTION=sqlite" >> .env.testing  
         echo "DB_DATABASE=/home/runner/work/laravel_building_2025/laravel_building_2025/database/testing.sqlite" >> .env.testing
-        echo "CACHE_DRIVER=array" >> .env.testing
+        echo "CACHE_STORE=array" >> .env.testing
         echo "QUEUE_CONNECTION=sync" >> .env.testing
-        echo "SESSION_DRIVER=array" >> .env.testing
+        echo "SESSION_DRIVER=file" >> .env.testing
         echo "MAIL_MAILER=array" >> .env.testing
         echo "TELESCOPE_ENABLED=false" >> .env.testing
         echo "PERMISSION_VALIDATION_ENABLED=true" >> .env.testing
