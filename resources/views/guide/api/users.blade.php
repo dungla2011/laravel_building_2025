@@ -17,7 +17,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="mb-0">Permissions & Roles</h6>
                 <a href="{{ route('guide.api.users.roles-permissions') }}" target="_blank" class="btn btn-sm btn-outline-primary" title="View JSON">
-                    <i class="bi bi-filetype-json"></i>
+                    JSON <i class="bi bi-filetype-json"></i>
                 </a>
             </div>
             
@@ -94,10 +94,12 @@
                     <div class="col-md-6">
                         <h6>Test Users Available:</h6>
                         <ul class="mb-0">
-                            <li><strong>Super Admin:</strong> superadmin@example.com / password</li>
-                            <li><strong>Admin:</strong> admin@example.com / password</li>
-                            <li><strong>Editor:</strong> editor@example.com / password</li>
-                            <li><strong>Viewer:</strong> viewer@example.com / password</li>
+                            @foreach($sampleUsers as $user)
+                                <li>
+                                    <strong>{{ $user['role_descriptions'][0]['display_name'] ?? $user['name'] }}:</strong> 
+                                    {{ $user['email'] }} / {{ $user['password'] }}
+                                </li>
+                            @endforeach
                         </ul>
                     </div>
                     <div class="col-md-6">
@@ -132,42 +134,25 @@
             </div>
         </div>
 
-        <!-- Authentication Testing -->
-        <div class="api-card">
-            <div class="card-body">
-                <h5 class="card-title">Get Authentication Token</h5>
-                <p class="text-muted">Login to get your API token for testing:</p>
-                
-                <form id="loginForm" onsubmit="event.preventDefault(); getAuthToken();">
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Email</label>
-                            <select class="form-select" id="loginEmail">
-                                <option value="superadmin@example.com">Super Admin</option>
-                                <option value="admin@example.com">Admin</option>
-                                <option value="editor@example.com">Editor</option>
-                                <option value="viewer@example.com">Viewer</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Password</label>
-                            <input type="password" class="form-control" id="loginPassword" value="password">
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <span class="spinner-border spinner-border-sm loading-spinner"></span>
-                        Get Token
-                    </button>
-                </form>
-                
-                <div class="mt-3" id="tokenResult" style="display: none;">
-                    <label class="form-label">Your API Token:</label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="apiToken" readonly>
-                        <button class="btn btn-outline-secondary" onclick="copyToken()">Copy</button>
-                    </div>
-                    <div class="small text-success mt-1">Token copied to all test sections below!</div>
-                </div>
+        <!-- Sticky Authentication Form - Single Line -->
+        <div class="sticky-auth-form">
+            <span class="auth-label">🔑 Get Token:</span>
+            <form id="loginForm" onsubmit="event.preventDefault(); getAuthToken();" style="display: flex; align-items: center; gap: 8px; margin: 0;">
+                <select class="form-select" id="loginEmail">
+                    @foreach($sampleUsers as $user)
+                        <option value="{{ $user['email'] }}">
+                            {{ $user['role_descriptions'][0]['display_name'] ?? $user['name'] }} | {{ $user['email'] }}
+                        </option>
+                    @endforeach
+                </select>
+                <input type="password" class="form-control" id="loginPassword" value="password" placeholder="Password">
+                <button type="submit" class="btn btn-primary">
+                    <span class="spinner-border spinner-border-sm loading-spinner" style="display: none;"></span>
+                    Login
+                </button>
+            </form>
+            <div id="tokenResult" style="display: none; margin-left: 8px;">
+                <!-- <span class="auth-label text-success">✅ Token ready</span> -->
             </div>
         </div>
 
@@ -441,7 +426,7 @@ async function getAuthToken() {
         const token = response.data.token;
         currentToken = token;
         
-        document.getElementById('apiToken').value = token;
+        // Show token status
         document.getElementById('tokenResult').style.display = 'block';
         
         // Update all token inputs
@@ -464,10 +449,22 @@ async function getAuthToken() {
 
 // Copy token to clipboard
 function copyToken() {
-    const tokenInput = document.getElementById('apiToken');
-    tokenInput.select();
-    document.execCommand('copy');
-    showToast('Token copied to clipboard!', 'success');
+    if (currentToken) {
+        navigator.clipboard.writeText(currentToken).then(() => {
+            showToast('Token copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = currentToken;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('Token copied to clipboard!', 'success');
+        });
+    } else {
+        showToast('No token available. Please login first.', 'warning');
+    }
 }
 
 // Test API endpoint

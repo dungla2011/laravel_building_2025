@@ -20,8 +20,9 @@ class ApiDocController extends Controller
         // Get available permissions for display
         $permissions = Permission::where('resource', 'users')->get();
         $roles = Role::with('permissions')->get();
+        $sampleUsers = $this->getSampleUsers();
 
-        return view('guide.api.users', compact('permissions', 'roles'));
+        return view('guide.api.users', compact('permissions', 'roles', 'sampleUsers'));
     }
 
     /**
@@ -713,6 +714,7 @@ class ApiDocController extends Controller
     private function generateRequestExample($fields, $includeRequired = true)
     {
         $example = [];
+        $hasPassword = false;
         
         foreach ($fields as $field) {
             if ($includeRequired && !$field['required']) {
@@ -724,6 +726,16 @@ class ApiDocController extends Controller
             }
             
             $example[$field['name']] = $this->generateSampleValue($field['name'], $field['type']);
+            
+            // Track if password field is included
+            if ($field['name'] === 'password') {
+                $hasPassword = true;
+            }
+        }
+        
+        // Add password_confirmation if password is present (for create operations)
+        if ($hasPassword && $includeRequired) {
+            $example['password_confirmation'] = $this->generateSampleValue('password', 'string');
         }
         
         return $example;
@@ -1095,27 +1107,37 @@ class ApiDocController extends Controller
      */
     private function getSampleUsers()
     {
-        return User::with('roles')->whereIn('email', [
-            'superadmin@example.com',
-            'admin@example.com', 
-            'editor@example.com',
-            'viewer@example.com'
-        ])->get()->map(function($user) {
-            return [
-                'email' => $user->email,
-                'name' => $user->name,
-                'roles' => $user->roles->pluck('name')->toArray(),
-                'role_descriptions' => $user->roles->map(function($role) {
-                    return [
-                        'name' => $role->name,
-                        'display_name' => $role->display_name,
-                        'description' => $role->description
-                    ];
-                })->toArray(),
-                'password' => 'password', // For documentation purposes
-                'login_instructions' => 'Use email and password to get access token via /api/login'
-            ];
-        })->toArray();
+        // Get representative users for each role (one user per role)
+        $roleNames = ['super-admin', 'admin', 'editor', 'viewer'];
+        $sampleUsers = collect();
+        
+        foreach ($roleNames as $roleName) {
+            // Get first user with this role
+            $user = User::with('roles')
+                ->whereHas('roles', function($query) use ($roleName) {
+                    $query->where('name', $roleName);
+                })
+                ->first();
+                
+            if ($user) {
+                $sampleUsers->push([
+                    'email' => $user->email,
+                    'name' => $user->name,
+                    'roles' => $user->roles->pluck('name')->toArray(),
+                    'role_descriptions' => $user->roles->map(function($role) {
+                        return [
+                            'name' => $role->name,
+                            'display_name' => $role->display_name,
+                            'description' => $role->description
+                        ];
+                    })->toArray(),
+                    'password' => 'password', // For documentation purposes
+                    'login_instructions' => 'Use email and password to get access token via /api/login'
+                ]);
+            }
+        }
+        
+        return $sampleUsers->toArray();
     }
 
     /**

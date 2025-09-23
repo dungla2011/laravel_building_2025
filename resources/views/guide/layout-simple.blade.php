@@ -21,8 +21,8 @@
         }
 
         .container-fluid {
-            max-width: 1200px;
-            margin: 2rem auto;
+            /* max-width: 1200px; */
+            /* margin: 2rem auto; */
             background: white;
             border-radius: 8px;
             border: 1px solid #dee2e6;
@@ -93,7 +93,7 @@
 
         .json-editor {
             font-family: 'Monaco', 'Menlo', monospace;
-            background: #f8f9fa;
+            /* background: #f8f9fa; */
             border: 1px solid #dee2e6;
             border-radius: 4px;
             padding: 0.75rem;
@@ -194,9 +194,76 @@
 
         .toast-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
             z-index: 1050;
+        }
+        
+        /* Default toast container (top-right) for backward compatibility */
+        .toast-container:not([id]) {
+            top: 60px;
+            right: 20px;
+        }
+
+        /* Sticky Authentication Form - Single Line */
+        .sticky-auth-form {
+            position: fixed;
+            top: 2px;
+            right: 2px;
+            z-index: 1040;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 5px 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+        }
+        
+        .sticky-auth-form .form-control,
+        .sticky-auth-form .form-select {
+            font-size: 0.8rem;
+            height: 30px;
+            padding: 4px 8px;
+            width: 250px;
+            flex: none;
+        }
+
+        .sticky-auth-form input {
+            width: 100px!important;
+        }
+        
+        .sticky-auth-form .btn {
+            font-size: 0.8rem;
+            padding: 4px 12px;
+            height: 30px;
+            flex: none;
+        }
+        
+        .sticky-auth-form .auth-label {
+            font-size: 0.8rem;
+            color: #495057;
+            margin: 0;
+            font-weight: 500;
+        }
+        
+        .compact-form-row > div {
+            flex: 1;
+        }
+        
+        .compact-form-row label {
+            font-size: 0.75rem;
+            margin-bottom: 2px;
+            color: #6c757d;
+        }
+        
+        /* Adjust body padding to avoid overlap */
+        body {
+            padding-top: 46px;
+        }
+        
+        .container-fluid {
+            width: 100%;
         }
 
         pre {
@@ -223,9 +290,9 @@
     </style>
 </head>
 <body>
-    <div class="container-fluid">
+    <div class="container-fluid" style="max-width: 100%; padding: 0;">
         <div class="row g-0">
-            <main class="col-12 p-4">
+            <main class="col-12 p-3">
                 @yield('content')
             </main>
         </div>
@@ -252,8 +319,30 @@
         }
 
         // Show toast notification
-        function showToast(message, type = 'info') {
-            const toastContainer = document.querySelector('.toast-container');
+        function showToast(message, type = 'info', position = 'top-right') {
+            // Get or create toast container for specific position
+            let containerId = `toast-container-${position}`;
+            let toastContainer = document.getElementById(containerId);
+            
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = containerId;
+                toastContainer.className = 'toast-container';
+                
+                // Set position styles
+                if (position === 'bottom-right') {
+                    toastContainer.style.cssText = 'position: fixed; bottom: 20px; right: 20px; z-index: 1050;';
+                } else if (position === 'bottom-left') {
+                    toastContainer.style.cssText = 'position: fixed; bottom: 20px; left: 20px; z-index: 1050;';
+                } else if (position === 'top-left') {
+                    toastContainer.style.cssText = 'position: fixed; top: 60px; left: 20px; z-index: 1050;';
+                } else { // default top-right
+                    toastContainer.style.cssText = 'position: fixed; top: 60px; right: 20px; z-index: 1050;';
+                }
+                
+                document.body.appendChild(toastContainer);
+            }
+            
             const toastElement = document.createElement('div');
             toastElement.className = `toast align-items-center text-white bg-${type} border-0`;
             toastElement.setAttribute('role', 'alert');
