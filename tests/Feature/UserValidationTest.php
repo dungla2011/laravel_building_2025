@@ -401,8 +401,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Valid Email User',
                     'email' => $this->makeUniqueEmail('validemail'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'ValidPassword123!',
+                    'password_confirmation' => 'ValidPassword123!'
                 ],
                 'expected_status' => 201
             ]
@@ -479,8 +479,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => 'Complete User',
                     'email' => $this->makeUniqueEmail('complete'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'CompletePassword123!',
+                    'password_confirmation' => 'CompletePassword123!'
                 ],
                 'expected_status' => 201
             ]
@@ -521,8 +521,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => '<script>alert("xss")</script>John Doe',
                     'email' => $this->makeUniqueEmail('htmltags'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'SecurePassword123!',
+                    'password_confirmation' => 'SecurePassword123!'
                 ],
                 'expected_status' => 201, // Should create but sanitize the data
                 'check_sanitization' => true
@@ -532,8 +532,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => "'; DROP TABLE users; --",
                     'email' => $this->makeUniqueEmail('sqlinjection'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'SafePassword123!',
+                    'password_confirmation' => 'SafePassword123!'
                 ],
                 'expected_status' => 201, // Should create but sanitize
                 'check_sanitization' => true
@@ -543,8 +543,8 @@ class UserValidationTest extends TestCase
                 'data' => [
                     'name' => str_repeat('A', 300), // Very long name
                     'email' => $this->makeUniqueEmail('longname'),
-                    'password' => 'password123',
-                    'password_confirmation' => 'password123'
+                    'password' => 'StrongPassword123!',
+                    'password_confirmation' => 'StrongPassword123!'
                 ],
                 'expected_status' => 422 // Should reject if name too long
             ]
