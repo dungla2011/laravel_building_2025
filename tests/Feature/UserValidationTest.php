@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use Tests\Traits\HttpTestTrait;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Exception;
+use Illuminate\Support\Facades\Hash;
 
 /**
  * User Validation Feature Test
@@ -18,7 +20,7 @@ use Exception;
  */
 class UserValidationTest extends TestCase
 {
-    use HttpTestTrait;
+    use RefreshDatabase, HttpTestTrait;
 
     private array $testAdmin = ['email' => 'admin@example.com', 'password' => 'password'];
     private string $testRunId;
@@ -46,6 +48,17 @@ class UserValidationTest extends TestCase
     private function initializeTestEnvironment(): void
     {
         echo "🔧 Setting up test environment for user validation\n";
+        
+        // Ensure admin user exists (fallback if seeding didn't work)
+        $adminUser = \App\Models\User::where('email', $this->testAdmin['email'])->first();
+        if (!$adminUser) {
+            $adminUser = \App\Models\User::create([
+                'name' => 'Test Administrator',
+                'email' => $this->testAdmin['email'],
+                'password' => bcrypt($this->testAdmin['password']),
+                'email_verified_at' => now(),
+            ]);
+        }
         
         // Get CSRF token
         $this->getCsrfToken();
