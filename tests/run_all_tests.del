@@ -20,6 +20,7 @@ class TestRunner
     private bool $verbose = false;
     private string $envFlag = '';
     private float $startTime;
+    private $backgroundKillerProcess = null;
     
     public function __construct()
     {
@@ -193,6 +194,36 @@ class TestRunner
             echo "💥 $failedTests TEST FILE(S) FAILED!\n";
             echo str_repeat("=", 100) . "\n";
         }
+        
+        // Cleanup background killer
+        $this->cleanupBackgroundKiller();
+    }
+    
+    /**
+     * Clean up background process killer
+     */
+    private function cleanupBackgroundKiller(): void
+    {
+        if ($this->backgroundKillerProcess && is_resource($this->backgroundKillerProcess)) {
+            echo "🧹 Cleaning up background process killer...\n";
+            
+            // Write special "STOP" command to pid file
+            $pidFile = $this->testsDir . '/pid.txt';
+            file_put_contents($pidFile, 'STOP');
+            
+            // Give it a moment to stop gracefully
+            sleep(1);
+            
+            // Close the process handle
+            proc_close($this->backgroundKillerProcess);
+            
+            // Clean up pid file
+            if (file_exists($pidFile)) {
+                unlink($pidFile);
+            }
+            
+            echo "   ✅ Background killer cleanup completed\n";
+        }
     }
     
     /**
@@ -210,6 +241,74 @@ class TestRunner
     }
     
     /**
+     * Start background process killer monitor on Windows
+     */
+    private function startBackgroundKiller(): void
+    {
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        
+        if (!$isWindows) {
+            echo "ℹ️  Background killer not needed on this platform\n";
+            return;
+        }
+        
+        $killerScript = $this->testsDir . '/kill_process.php';
+        $pidFile = $this->testsDir . '/pid.txt';
+        
+        if (!file_exists($killerScript)) {
+            echo "⚠️  Background killer script not found: $killerScript\n";
+            die();
+        }
+        
+        // Clear any existing PID file
+        if (file_exists($pidFile)) {
+            file_put_contents($pidFile, '');
+        }
+        
+        // Check if killer is already running
+        exec('tasklist /FI "IMAGENAME eq php.exe" /FO CSV | findstr "kill_process.php"', $output);
+        if (!empty($output)) {
+            echo "✅ Background killer already running\n";
+            return;
+        }
+        
+        echo "🚀 Starting background process killer monitor...\n";
+        
+        // Use proc_open to start background process (works in PowerShell)
+        $descriptorspec = [
+            0 => ['pipe', 'r'],
+            1 => ['file', 'nul', 'w'],  // Redirect stdout to null
+            2 => ['file', 'nul', 'w']   // Redirect stderr to null
+        ];
+        
+        $command = "php \"$killerScript\"";
+        $process = proc_open($command, $descriptorspec, $pipes);
+        
+        if (is_resource($process)) {
+            fclose($pipes[0]);
+            echo "   ✅ Background killer started successfully\n";
+            
+            // Store process handle for cleanup later
+            $this->backgroundKillerProcess = $process;
+        } else {
+            echo "   ⚠️  Failed to start background killer\n";
+        }
+        
+        // Give it a moment to start
+        sleep(1);
+        
+        // Verify it started
+        exec('tasklist /FI "IMAGENAME eq php.exe" /FI "WINDOWTITLE eq kill_process.php" /FO CSV', $verifyOutput);
+        if (!empty($verifyOutput) && count($verifyOutput) > 1) {
+            echo "✅ Background killer started successfully\n";
+        } else {
+            echo "⚠️  Could not verify background killer startup (continuing anyway)\n";
+        }
+        
+        echo "\n";
+    }
+    
+    /**
      * Main run method
      */
     public function run(array $argv): int
@@ -219,6 +318,7 @@ class TestRunner
         echo str_repeat("=", 100) . "\n\n";
         
         $this->parseArguments($argv);
+        $this->startBackgroundKiller();
         $this->discoverTestFiles();
         
         if (empty($this->testFiles)) {

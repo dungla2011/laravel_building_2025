@@ -105,4 +105,8 @@ echo "\n\n";
 
 // Finish test suite
 $exitCode = TestUtils::finishTestSuite($startTime, $totalTests, $failedTests, $totalAssertions);
-exit($exitCode);
+
+// Only exit if running standalone (not included by test suite)
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_NAME'])) {
+    exit($exitCode);
+}

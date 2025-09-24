@@ -110,24 +110,32 @@ class TestUtils
             exec('netstat -tuln | grep :'.self::$serverPort, $output);
         }
         
-        $serverRunning = false;
-        $processId = null;
+        // Debug: Show netstat output
+        echo "🔧 DEBUG: netstat output for port ".self::$serverPort.":\n";
+        foreach ($output as $line) {
+            echo "   $line\n";
+        }
         
-        // Parse netstat output to find listening process
+        $serverRunning = false;
+        $processIds = [];
+        
+        // Parse netstat output to find ALL listening processes
         foreach ($output as $line) {
             if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
                 $serverRunning = true;
                 if ($isWindows && preg_match('/\s+(\d+)$/', $line, $matches)) {
-                    $processId = $matches[1];
+                    $pid = $matches[1];
+                    if (!in_array($pid, $processIds)) {
+                        $processIds[] = $pid;
+                    }
                 }
-                break;
             }
         }
         
         if ($serverRunning) {
             echo "⚠️  Port ".self::$serverPort." is in use";
-            if ($processId) {
-                echo " (PID: $processId)";
+            if (!empty($processIds)) {
+                echo " (PIDs: " . implode(', ', $processIds) . ")";
             }
             echo "\n";
             
@@ -156,66 +164,134 @@ class TestUtils
                 echo "🔄 Force kill mode enabled - will restart server\n";
             }
             
-            // Kill the process to restart with fresh code
-            if ($shouldKill && $processId) {
-                if ($isWindows) {
-                    echo "🔄 Killing process $processId to restart with fresh code...\n";
-                    
-                    // Use more direct taskkill approach
-                    exec("taskkill /PID $processId /F /T", $killOutput, $killExitCode);
-                    
-                    if ($killExitCode !== 0) {
-                        echo "   Trying alternative kill method...\n";
-                        // Kill by port using more robust command
-                        $killCmd = 'for /f "tokens=5" %p in (\'netstat -ano ^| find ":'.self::$serverPort.'" ^| find "LISTENING"\') do taskkill /PID %p /F /T';
-                        exec($killCmd, $altKillOutput);
-                    }
-                } else {
-                    echo "🔄 Killing process $processId to restart with fresh code...\n";
-                    exec("kill -TERM $processId", $killOutput, $killExitCode);
-                    
-                    // If TERM fails, use KILL
-                    if ($killExitCode !== 0) {
-                        sleep(1);
-                        exec("kill -KILL $processId", $killOutput2);
-                    }
-                }
+            // Kill all processes using file-based approach
+            if ($shouldKill && !empty($processIds)) {
+                echo "🔄 Requesting kill for " . count($processIds) . " processes via file...\n";
                 
-                // Wait for process to terminate
-                sleep(2);
+                // Write all PIDs to file, one per line
+                $pidFile = __DIR__ . '/pid.txt';
+                file_put_contents($pidFile, implode("\n", $processIds));
+                echo "   📝 Wrote " . count($processIds) . " PIDs to $pidFile\n";
                 
-                // Verify process is killed (simpler check)
-                $verifyAttempts = 0;
-                $maxVerifyAttempts = 3;
+                // Wait for background killer to process it
+                echo "   ⏳ Waiting for background killer to handle process...\n";
+                $maxWait = 10; // Maximum 10 seconds wait
+                $waited = 0;
                 
-                while ($verifyAttempts < $maxVerifyAttempts) {
-                    $output = [];
-                    if ($isWindows) {
-                        exec("netstat -ano | findstr \":".self::$serverPort.'"', $output);
-                    } else {
-                        exec('netstat -tuln | grep :'.self::$serverPort, $output);
-                    }
+                while ($waited < $maxWait) {
+                    sleep(1);
+                    $waited++;
                     
-                    $stillRunning = false;
-                    foreach ($output as $line) {
-                        if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
-                            $stillRunning = true;
+                    // Check if PID file is cleared (means killer processed it)
+                    if (file_exists($pidFile)) {
+                        $content = trim(file_get_contents($pidFile));
+                        if (empty($content)) {
+                            echo "   ✅ Background killer processed the request\n";
                             break;
                         }
                     }
                     
-                    if (!$stillRunning) {
-                        echo "✅ Process killed successfully\n";
+                    if ($waited >= $maxWait) {
+                        echo "   ⚠️  Timeout waiting for background killer, continuing anyway...\n";
+                    }
+                }
+                
+                // Additional wait for process termination  
+                sleep(1);
+                
+                // Verify each PID is actually killed - more thorough check
+                echo "🔍 Verifying process termination...\n";
+                $verifyAttempts = 0;
+                $maxVerifyAttempts = 15; // Increased timeout
+                $allKilled = false;
+                
+                while ($verifyAttempts < $maxVerifyAttempts && !$allKilled) {
+                    $stillRunningPids = [];
+                    
+                    // Check each PID individually
+                    foreach ($processIds as $pid) {
+                        if ($isWindows) {
+                            exec("tasklist /PID $pid /FO CSV 2>NUL", $checkOutput, $checkExitCode);
+                            if ($checkExitCode === 0 && count($checkOutput) > 1) {
+                                $stillRunningPids[] = $pid;
+                            }
+                        } else {
+                            // Linux: Check if process still exists
+                            exec("kill -0 $pid 2>/dev/null", $checkOutput, $checkExitCode);
+                            if ($checkExitCode === 0) {
+                                $stillRunningPids[] = $pid;
+                            }
+                        }
+                    }
+                    
+                    if (empty($stillRunningPids)) {
+                        echo "✅ All processes killed successfully\n";
+                        $allKilled = true;
                         break;
                     }
                     
                     $verifyAttempts++;
-                    if ($verifyAttempts < $maxVerifyAttempts) {
-                        echo "   ⏳ Waiting for process to terminate...\n";
-                        sleep(1);
+                    echo "   ⏳ Still running PIDs: " . implode(', ', $stillRunningPids) . " (attempt $verifyAttempts/$maxVerifyAttempts)\n";
+                    
+                    // Try force kill if normal kill didn't work after several attempts
+                    if ($verifyAttempts > 5 && $verifyAttempts % 3 === 0) {
+                        echo "   💪 Attempting force kill for remaining processes...\n";
+                        
+                        if ($isWindows) {
+                            // Write remaining PIDs back to file for background killer
+                            $pidFile = __DIR__ . '/pid.txt';
+                            file_put_contents($pidFile, implode("\n", $stillRunningPids));
+                            
+                            // Give background killer time to force kill
+                            sleep(2);
+                        } else {
+                            // Linux: Direct force kill with SIGKILL
+                            foreach ($stillRunningPids as $pid) {
+                                echo "      🔫 Force killing PID $pid with kill -9...\n";
+                                exec("kill -9 $pid 2>/dev/null", $killOutput, $killExitCode);
+                                if ($killExitCode === 0) {
+                                    echo "      ✅ Force killed PID $pid\n";
+                                } else {
+                                    echo "      ⚠️  Failed to force kill PID $pid\n";
+                                }
+                            }
+                            sleep(1);
+                        }
                     } else {
-                        echo "⚠️  Process may still be running, continuing anyway...\n";
+                        sleep(1);
                     }
+                    
+                    if (empty($stillRunningPids)) {
+                        echo "✅ All processes killed successfully\n";
+                        $allKilled = true;
+                        break;
+                    }
+                    
+                    $verifyAttempts++;
+                    echo "   ⏳ Still running PIDs: " . implode(', ', $stillRunningPids) . " (attempt $verifyAttempts/$maxVerifyAttempts)\n";
+                    
+                    // Try force kill if normal kill didn't work after several attempts
+                    if ($verifyAttempts > 5 && $verifyAttempts % 3 === 0) {
+                        echo "   💪 Attempting force kill for remaining processes...\n";
+                        
+                        // Write remaining PIDs back to file for force kill
+                        $pidFile = __DIR__ . '/pid.txt';
+                        file_put_contents($pidFile, implode("\n", $stillRunningPids));
+                        
+                        // Give background killer time to force kill
+                        sleep(2);
+                    } else {
+                        sleep(1);
+                    }
+                }
+                
+                if (!$allKilled) {
+                    echo "❌ CRITICAL: Failed to kill all processes after $maxVerifyAttempts attempts!\n";
+                    echo "   Still running PIDs: " . implode(', ', $stillRunningPids) . "\n";
+                    echo "   Please manually kill these processes or restart the system.\n";
+                    
+                    // Don't continue - this could cause port conflicts
+                    die("🛑 Aborting test due to process cleanup failure. Manual intervention required.\n");
                 }
             }
         }
