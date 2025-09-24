@@ -91,14 +91,8 @@ jobs:
 
 
 
-    - name: Execute Permission Tests (Standalone)
-      run: php tests/01-test-permission-standalone.php super-admin --env=testing
-
-    - name: Execute User Validation Tests (Standalone)
-      run: php tests/02-test_user_validation.php --env=testing
-
-    - name: Execute Batch Validation Tests (Standalone)
-      run: php tests/03-test_batch_validation.php --env=testing
+    - name: Execute All Standalone Tests
+      run: php tests/run_all_tests.php --env=testing
 
     - name: Show logs on failure
       if: failure()
