@@ -4,12 +4,7 @@
 
 @section('content')
 <div class="container">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1><i class="fas fa-shield-alt me-2"></i>Field Permissions Management</h1>
-            <p class="text-muted">Configure read/write permissions for each role on individual table fields</p>
-        </div>
-    </div>
+    
     
     <div class="row mb-4">
         <div class="col-md-12">
@@ -51,31 +46,34 @@
                 <div class="permission-matrix">
                     <div class="table-responsive">
                         <table class="table table-bordered table-sm">
-                            <thead class="table-dark">
+                            <thead class="table">
                                 <tr>
-                                    <th style="width: 150px;">Role / Field</th>
-                                    @foreach($tableData['fields'] as $field)
-                                        <th class="text-center field-header">
-                                            <div class="field-name">{{ $field }}</div>
+                                    <th style=" padding: 5px 10px; ">Field / Role</th>
+                                    @foreach($roles as $role)
+                                        <th class="text-center">
+                                            <div class="role-header">
+                                                
+                                                <strong>{{ ucfirst($role->name) }}</strong>
+                                                <small>ID: {{ $role->id }}</small>
+                                            </div>
                                         </th>
                                     @endforeach
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($roles as $role)
+                                @foreach($tableData['fields'] as $field)
                                 <tr>
-                                    <td class="fw-bold bg-light">
-                                        <i class="fas fa-user-tag"></i> {{ ucfirst($role->name) }}
-                                        <br><small class="text-muted">Role ID: {{ $role->id }}</small>
+                                    <td class="bg-light">
+                                        {{ $field }}
                                     </td>
-                                    @foreach($tableData['fields'] as $field)
+                                    @foreach($roles as $role)
                                         @php
                                             $permission = $tableData['permissions'][$role->id][$field] ?? null;
                                             $canRead = $permission ? $permission->can_read : false;
                                             $canWrite = $permission ? $permission->can_write : false;
                                             $permissionId = $permission ? $permission->id : null;
                                         @endphp
-                                        <td class="text-center p-2">
+                                        <td class="text-center">
                                             <div class="permission-cell">
                                                 <!-- Read Permission -->
                                                 <div class="permission-row">
@@ -244,11 +242,13 @@ function updateSaveButton() {
 }
 
 function savePermissionNow(permissionId, roleId, table, field, type, value) {
-    const url = permissionId 
+    const hasPermissionId = permissionId && permissionId !== 'null' && permissionId !== null && permissionId !== '';
+    
+    const url = hasPermissionId 
         ? `{{ route('admin.field-permissions.update', ':id') }}`.replace(':id', permissionId)
         : `{{ route('admin.field-permissions.store') }}`;
     
-    const method = permissionId ? 'PUT' : 'POST';
+    const method = hasPermissionId ? 'PUT' : 'POST';
     
     // Get current values from both buttons for this role/table/field
     const readButton = $(`[data-role-id="${roleId}"][data-table="${table}"][data-field="${field}"][data-type="read"]`);
@@ -263,44 +263,69 @@ function savePermissionNow(permissionId, roleId, table, field, type, value) {
         field_name: field,
         can_read: type === 'read' ? Boolean(value) : Boolean(currentReadValue),
         can_write: type === 'write' ? Boolean(value) : Boolean(currentWriteValue),
-        _method: method,
         _token: $('meta[name="csrf-token"]').attr('content')
     };
+    
+    // Only add _method for PUT requests
+    if (hasPermissionId) {
+        data._method = 'PUT';
+    }
 
-    $.ajax({
+    console.log('Making request:', {
         url: url,
         method: 'POST',
-        data: data,
-        success: function(response) {
-            console.log('Permission saved successfully');
-            // Remove from pending changes if it exists
-            const changeIndex = pendingChanges.findIndex(change => 
-                change.roleId === roleId && 
-                change.table === table && 
-                change.field === field &&
-                change.type === type
-            );
-            if (changeIndex >= 0) {
-                pendingChanges.splice(changeIndex, 1);
-                updateSaveButton();
-            }
-        },
-        error: function(error) {
-            console.error('Error saving permission:', error);
-            alert('Error saving permission. Please try again.');
-            // Revert the button state
-            const button = $(`[data-role-id="${roleId}"][data-table="${table}"][data-field="${field}"][data-type="${type}"]`);
-            const currentValue = button.data('current') === 'true';
-            const revertValue = !currentValue;
-            
-            button.data('current', revertValue.toString());
-            if (revertValue) {
-                button.removeClass('inactive').addClass('active');
-                button.find('i').removeClass('fa-toggle-off').addClass('fa-toggle-on');
-            } else {
-                button.removeClass('active').addClass('inactive');
-                button.find('i').removeClass('fa-toggle-on').addClass('fa-toggle-off');
-            }
+        data: data
+    });
+    
+    // Convert data to FormData for fetch
+    const formData = new FormData();
+    Object.keys(data).forEach(key => {
+        formData.append(key, data[key]);
+    });
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Permission saved successfully:', data);
+        // Remove from pending changes if it exists
+        const changeIndex = pendingChanges.findIndex(change => 
+            change.roleId == roleId && 
+            change.table === table && 
+            change.field === field &&
+            change.type === type
+        );
+        if (changeIndex >= 0) {
+            pendingChanges.splice(changeIndex, 1);
+            updateSaveButton();
+        }
+    })
+    .catch(error => {
+        console.error('Error saving permission:', error);
+        alert('Error saving permission: ' + error.message);
+        
+        // Revert the button state
+        const button = $(`[data-role-id="${roleId}"][data-table="${table}"][data-field="${field}"][data-type="${type}"]`);
+        const currentValue = button.data('current') === 'true';
+        const revertValue = !currentValue;
+        
+        button.data('current', revertValue.toString());
+        if (revertValue) {
+            button.removeClass('inactive').addClass('active');
+            button.find('i').removeClass('fa-toggle-off').addClass('fa-toggle-on');
+        } else {
+            button.removeClass('active').addClass('inactive');
+            button.find('i').removeClass('fa-toggle-on').addClass('fa-toggle-off');
         }
     });
 }

@@ -20,6 +20,10 @@
         body {
             background-color: #f8f9fa;
         }
+
+        td.bg-light {
+            padding: 5px 10px;
+        }
         
         .navbar-brand {
             font-weight: 600;
@@ -57,9 +61,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
-            padding: 4px 8px;
-            border-radius: 6px;
+            /* margin-bottom: 8px; */
+            padding: 2px 5px;
+            /* border-radius: 6px; */
             background-color: #f8f9fa;
         }
         .permission-label {
@@ -67,11 +71,11 @@
             font-weight: 500;
             color: #495057;
         }
-                .permission-toggle {
+        .permission-toggle {
             border: none;
             cursor: pointer;
             transition: all 0.2s ease;
-            font-size: 18px;
+            font-size: 20px;
             background: none;
             padding: 2px;
         }
@@ -87,12 +91,14 @@
         .permission-toggle.write.inactive {
             color: #6c757d;
         }
-        .field-header {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            white-space: nowrap;
+        .role-header {
+            text-align: center;
             padding: 10px 5px;
-            min-height: 120px;
+            min-width: 120px;
+        }
+        .role-header small {
+            font-size: 11px;
+            opacity: 0.8;
         }
         .admin-stats .card {
             transition: transform 0.2s;
