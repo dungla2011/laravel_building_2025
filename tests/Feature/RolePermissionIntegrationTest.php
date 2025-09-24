@@ -54,6 +54,11 @@ class RolePermissionIntegrationTest extends TestCase
             unlink($this->cookieJar);
         }
         
+        // Reset tokens and data to free memory
+        $this->userToken = null;
+        $this->csrfToken = null;
+        $this->rolePermissionData = null;
+        
         parent::tearDown();
     }
 
@@ -246,16 +251,20 @@ class RolePermissionIntegrationTest extends TestCase
     }
 
     /**
-     * Make HTTP request using CURL (same as standalone test)
+     * Make HTTP request using CURL with CI-friendly timeouts
      */
     private function makeRequest(string $url, string $method = 'GET', $data = null, array $headers = [], bool $useCookies = false): array
     {
+        // Use shorter timeout for CI to avoid hanging
+        $timeout = (getenv('CI') || getenv('GITHUB_ACTIONS')) ? 15 : 30;
+        
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10); // Add connection timeout
         curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
         
         if ($useCookies) {
@@ -308,16 +317,33 @@ class RolePermissionIntegrationTest extends TestCase
     {
         echo "🔧 Setting up test environment for role: $testRole\n";
         
-        // Initialize session
-        $response = $this->makeRequest("{$this->baseUrl}/admin/role-permissions", 'GET', null, [], true);
-        $this->assertEquals(200, $response['http_code'], 'Failed to initialize session');
+        // Initialize session with retry logic for CI
+        $maxRetries = 3;
+        $response = null;
+        
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            echo "🔍 Session initialization attempt $attempt/$maxRetries...\n";
+            $response = $this->makeRequest("{$this->baseUrl}/admin/role-permissions", 'GET', null, [], true);
+            
+            if ($response['success'] && $response['http_code'] === 200) {
+                echo "✅ Session initialization successful\n";
+                break;
+            } else {
+                echo "⚠️  Attempt $attempt failed (HTTP {$response['http_code']})\n";
+                if ($attempt < $maxRetries) {
+                    sleep(2); // Wait before retry
+                }
+            }
+        }
+        
+        $this->assertEquals(200, $response['http_code'], 'Failed to initialize session after ' . $maxRetries . ' attempts');
         
         // Get CSRF token
         if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
             $this->csrfToken = $matches[1];
             echo "✅ CSRF token obtained\n";
         } else {
-            $this->fail('Failed to get CSRF token');
+            $this->fail('Failed to get CSRF token after successful session initialization');
         }
         
         // Get roles and permissions
