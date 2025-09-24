@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', 'Laravel Orion 2025')</title>
+    <title>@yield('title', 'LAD-GALAXY-2025')</title>
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -54,7 +54,7 @@
             <div class="container-fluid">
                 <a class="navbar-brand" href="{{ url('/') }}">
                     <i class="fas fa-rocket me-2"></i>
-                    Laravel Orion 2025
+                    LAD-GALAXY-2025
                 </a>
                 
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -135,7 +135,7 @@
                     <div class="col-md-6">
                         <p class="mb-0">
                             <i class="fas fa-copyright me-1"></i>
-                            2025 Laravel Orion 2025. Built with Laravel {{ app()->version() }}
+                            LAD-GALAXY-2025. Version {{ app()->version() }}
                         </p>
                     </div>
                     <div class="col-md-6 text-end">

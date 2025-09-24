@@ -49,9 +49,13 @@ Route::prefix('guide')->group(function () {
     });
 });
 
-// Admin Role-Permission Management Routes (Authentication Required)
+// Admin Routes (Authentication Required)
 // Route::middleware(['auth'])->prefix('admin')->group(function () {
-Route::prefix('admin')->group(function () {    
+Route::prefix('admin')->group(function () {
+    // Admin Dashboard
+    Route::get('/', [App\Http\Controllers\Admin\AdminController::class, 'index'])->name('admin.index');
+    
+    // Role-Permission Management Routes
     Route::prefix('role-permissions')->name('admin.role-permissions.')->group(function () {
         Route::get('/', [App\Http\Controllers\Admin\RolePermissionController::class, 'index'])->name('index');
         Route::post('/update', [App\Http\Controllers\Admin\RolePermissionController::class, 'updatePermission'])->name('update');
