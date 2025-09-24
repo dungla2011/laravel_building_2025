@@ -45,6 +45,61 @@
         .card {
             border-radius: 0.5rem;
         }
+        
+        /* Admin Panel Styles */
+        .permission-matrix {
+            overflow-x: auto;
+        }
+        .permission-cell {
+            min-width: 140px;
+        }
+        .permission-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+        }
+        .permission-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #495057;
+        }
+                .permission-toggle {
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 18px;
+            background: none;
+            padding: 2px;
+        }
+        .permission-toggle.read.active {
+            color: #28a745;
+        }
+        .permission-toggle.read.inactive {
+            color: #6c757d;
+        }
+        .permission-toggle.write.active {
+            color: #007bff;
+        }
+        .permission-toggle.write.inactive {
+            color: #6c757d;
+        }
+        .field-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            white-space: nowrap;
+            padding: 10px 5px;
+            min-height: 120px;
+        }
+        .admin-stats .card {
+            transition: transform 0.2s;
+        }
+        .admin-stats .card:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -76,9 +131,21 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li>
+                                    <a target="_blank" class="dropdown-item" href="{{ route('admin.dashboard') }}">
+                                        <i class="fas fa-tachometer-alt me-2"></i>
+                                        Dashboard
+                                    </a>
+                                </li>
+                                <li>
                                     <a target="_blank" class="dropdown-item" href="{{ route('admin.users') }}">
                                         <i class="fas fa-users me-2"></i>
                                         Users
+                                    </a>
+                                </li>
+                                <li>
+                                    <a target="_blank" class="dropdown-item" href="{{ route('admin.field-permissions.index') }}">
+                                        <i class="fas fa-lock me-2"></i>
+                                        Field Permissions
                                     </a>
                                 </li>
                                 <li>
