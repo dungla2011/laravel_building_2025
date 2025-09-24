@@ -8,12 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasFactory, Notifiable, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -157,5 +156,23 @@ class User extends Authenticatable
         }
 
         return $this;
+    }
+
+    /**
+     * Get all permissions for user (both direct and through roles)
+     */
+    public function getAllPermissions()
+    {
+        // Get direct permissions
+        $directPermissions = $this->permissions;
+        
+        // Get permissions through roles
+        $rolePermissions = collect();
+        foreach ($this->roles as $role) {
+            $rolePermissions = $rolePermissions->merge($role->permissions);
+        }
+        
+        // Merge and remove duplicates
+        return $directPermissions->merge($rolePermissions)->unique('id');
     }
 }

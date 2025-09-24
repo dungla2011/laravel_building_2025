@@ -106,6 +106,19 @@
         .admin-stats .card:hover {
             transform: translateY(-2px);
         }
+        
+        /* Toast Styles */
+        .toast {
+            margin-bottom: 10px;
+        }
+        
+        .toast-header {
+            border-bottom: 1px solid rgba(0,0,0,.125);
+        }
+        
+        .toast-body {
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -148,12 +161,7 @@
                                         Users
                                     </a>
                                 </li>
-                                <li>
-                                    <a target="_blank" class="dropdown-item" href="{{ route('admin.field-permissions.index') }}">
-                                        <i class="fas fa-lock me-2"></i>
-                                        Field Permissions
-                                    </a>
-                                </li>
+            
                                 <li>
                                     <a target="_blank" class="dropdown-item" href="{{ route('admin.role-permissions.index') }}">
                                         <i class="fas fa-users-cog me-2"></i>
@@ -227,6 +235,9 @@
     
     <!-- Bootstrap JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
 
     <!-- Custom Scripts -->
     @stack('scripts')

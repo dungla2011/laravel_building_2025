@@ -159,6 +159,12 @@ class ToastSystem {
     addToContainer(toastElement) {
         const container = document.getElementById('toast-container');
         
+        // Check if container exists
+        if (!container) {
+            console.error('Toast container not found! Make sure #toast-container element exists in the DOM.');
+            return;
+        }
+        
         // Limit number of toasts
         while (container.children.length >= this.options.maxToasts) {
             const oldestToast = container.lastElementChild;

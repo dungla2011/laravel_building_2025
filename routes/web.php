@@ -53,17 +53,7 @@ Route::prefix('admin')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     
-    // Field Permissions
-    Route::prefix('field-permissions')->name('admin.field-permissions.')->group(function () {
-        Route::get('/', [App\Http\Controllers\FieldPermissionController::class, 'index'])->name('index');
-        Route::post('/', [App\Http\Controllers\FieldPermissionController::class, 'store'])->name('store');
-        Route::put('/{fieldPermission}', [App\Http\Controllers\FieldPermissionController::class, 'update'])->name('update');
-        Route::delete('/{fieldPermission}', [App\Http\Controllers\FieldPermissionController::class, 'destroy'])->name('destroy');
-        Route::post('/reset', [App\Http\Controllers\FieldPermissionController::class, 'reset'])->name('reset');
-        Route::post('/template', [App\Http\Controllers\FieldPermissionController::class, 'template'])->name('template');
-        Route::post('/refresh', [App\Http\Controllers\FieldPermissionController::class, 'reset'])->name('refresh');
-        Route::get('/export', function() { return response()->json(['message' => 'Export not implemented yet']); })->name('export');
-    });
+
     
     // Role-Permission Management Routes
     Route::prefix('role-permissions')->name('admin.role-permissions.')->group(function () {

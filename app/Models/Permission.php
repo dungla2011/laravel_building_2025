@@ -4,9 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Spatie\Permission\Contracts\Permission as PermissionContract;
 
-class Permission extends Model implements PermissionContract
+class Permission extends Model
 {
     protected $fillable = [
         'name',
@@ -64,7 +63,7 @@ class Permission extends Model implements PermissionContract
     /**
      * Find a permission by its name.
      */
-    public static function findByName(string $name, $guardName = null): PermissionContract
+    public static function findByName(string $name, $guardName = null): self
     {
         return static::where('name', $name)->firstOrFail();
     }
@@ -72,7 +71,7 @@ class Permission extends Model implements PermissionContract
     /**
      * Find a permission by its id.
      */
-    public static function findById(int|string $id, string $guardName = null): PermissionContract
+    public static function findById(int|string $id, string $guardName = null): self
     {
         return static::findOrFail($id);
     }
@@ -80,7 +79,7 @@ class Permission extends Model implements PermissionContract
     /**
      * Find or create permission by its name.
      */
-    public static function findOrCreate(string $name, $guardName = null): PermissionContract
+    public static function findOrCreate(string $name, $guardName = null): self
     {
         return static::firstOrCreate(['name' => $name]);
     }

@@ -4,9 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Spatie\Permission\Contracts\Role as RoleContract;
 
-class Role extends Model implements RoleContract
+class Role extends Model
 {
     protected $fillable = [
         'name',
@@ -32,13 +31,6 @@ class Role extends Model implements RoleContract
                     ->withTimestamps();
     }
 
-    /**
-     * The field permissions that belong to the role.
-     */
-    public function fieldPermissions()
-    {
-        return $this->hasMany(FieldPermission::class);
-    }
 
     /**
      * Check if role has permission
@@ -95,7 +87,7 @@ class Role extends Model implements RoleContract
     /**
      * Find a role by its name.
      */
-    public static function findByName(string $name, $guardName = null): RoleContract
+    public static function findByName(string $name, $guardName = null): self
     {
         return static::where('name', $name)->firstOrFail();
     }
@@ -103,7 +95,7 @@ class Role extends Model implements RoleContract
     /**
      * Find a role by its id.
      */
-    public static function findById(int|string $id, string $guardName = null): RoleContract
+    public static function findById(int|string $id, string $guardName = null): self
     {
         return static::findOrFail($id);
     }
@@ -111,7 +103,7 @@ class Role extends Model implements RoleContract
     /**
      * Find or create role by its name.
      */
-    public static function findOrCreate(string $name, $guardName = null): RoleContract
+    public static function findOrCreate(string $name, $guardName = null): self
     {
         return static::firstOrCreate(['name' => $name]);
     }
