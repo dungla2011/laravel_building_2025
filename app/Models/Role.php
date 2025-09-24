@@ -33,6 +33,14 @@ class Role extends Model implements RoleContract
     }
 
     /**
+     * The field permissions that belong to the role.
+     */
+    public function fieldPermissions()
+    {
+        return $this->hasMany(FieldPermission::class);
+    }
+
+    /**
      * Check if role has permission
      */
     public function hasPermission(string $permission): bool
