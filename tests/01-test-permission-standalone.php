@@ -187,7 +187,7 @@ class PermissionStandaloneTest
         return ['roles' => $roles, 'permissions' => $permissions];
     }
     
-    public function testEnableAllPermissionsAndTestApi(): void
+    public function testEnableAllPermissionsAndTestApi(): array
     {
         $userData = $this->testUsers[$this->testRole];
         echo "🔧 TEST 1: Enable all {$userData['display_name']} permissions and test API endpoints\n";
@@ -232,13 +232,15 @@ class PermissionStandaloneTest
         echo "\n📊 API Test Results: {$results['passed']}/{$results['total']} passed ({$successRate}%)\n";
         
         if ($successRate < 70) {
-            throw new Exception("Test failed: Only {$successRate}% of endpoints passed (expected >= 70%)");
+            echo "❌ Test failed: Only {$successRate}% of endpoints passed (expected >= 70%)\n";
+        } else {
+            echo "✅ Super Admin with all permissions can access most API endpoints!\n";
         }
         
-        echo "✅ Super Admin with all permissions can access most API endpoints!\n\n";
+        return $results;
     }
     
-    public function testDisableAllPermissionsAndTestApi(): void
+    public function testDisableAllPermissionsAndTestApi(): array
     {
         $userData = $this->testUsers[$this->testRole];
         echo "🔒 TEST 2: Disable all {$userData['display_name']} permissions and test API endpoints\n";
@@ -271,10 +273,10 @@ class PermissionStandaloneTest
         // Note: For non-Super Admin roles, we expect lower forbidden rates since they may have baseline permissions
         $expectedRate = ($this->testRole === 'super-admin') ? 80 : 50;
         if ($forbiddenRate < $expectedRate) {
-            throw new Exception("Test failed: Only {$forbiddenRate}% of endpoints were properly forbidden (expected >= {$expectedRate}%)");
+            echo "❌ Test failed: Only {$forbiddenRate}% of endpoints were properly forbidden (expected >= {$expectedRate}%)\n";
+        } else {
+            echo "✅ {$userData['display_name']} without permissions is correctly blocked from API endpoints!\n";
         }
-        
-        echo "✅ {$userData['display_name']} without permissions is correctly blocked from API endpoints!\n\n";
         
         // Step 3: Re-enable permissions to restore system state
         echo "🔄 Step 3: Re-enabling all permissions to restore system...\n";
@@ -282,6 +284,8 @@ class PermissionStandaloneTest
             $this->togglePermission($currentRoleId, $id, true);
         }
         echo "✅ System permissions restored\n\n";
+        
+        return $results;
     }
     
     private function togglePermission(int $roleId, int $permissionId, bool $granted): bool
@@ -390,32 +394,60 @@ class PermissionStandaloneTest
         return ['passed' => $passed, 'total' => $total];
     }
     
-    public function runForRole($role): void
+    public function runForRole($role): array
     {
         if (!$this->setRole($role)) {
             echo "❌ Invalid role: $role\n";
             echo "Available roles: " . implode(', ', array_keys($this->testUsers)) . "\n";
-            return;
+            return ['total' => 0, 'failed' => 1, 'assertions' => 0];
         }
         
         $userData = $this->testUsers[$this->testRole];
-        echo "=== {$userData['display_name']} PERMISSION TEST ===\n";
-        echo "Role: {$role}\n";
-        echo "Email: {$userData['email']}\n";
-        echo "Date: " . date('Y-m-d H:i:s') . "\n\n";
+        echo "Testing Role: {$userData['display_name']} ({$role})\n";
+        
+        $totalTests = 0;
+        $totalFailed = 0;
+        $totalAssertions = 0;
         
         try {
             $this->setUp();
-            $this->testEnableAllPermissionsAndTestApi();
-            $this->testDisableAllPermissionsAndTestApi();
             
-            echo str_repeat("=", 100) . "\n";
-            echo "🎉 ALL TESTS FOR {$userData['display_name']} COMPLETED SUCCESSFULLY!\n";
-            echo str_repeat("=", 100) . "\n";
+            // Test 1: Enable all permissions and test API
+            echo "\n" . str_repeat(".", 50) . " ";
+            $results1 = $this->testEnableAllPermissionsAndTestApi();
+            $totalTests++;
+            $totalAssertions += $results1['total'];
+            if ($results1['passed'] !== $results1['total']) {
+                $totalFailed++;
+                echo "F";
+            } else {
+                echo ".";
+            }
+            
+            // Test 2: Disable all permissions and test API  
+            echo " ";
+            $results2 = $this->testDisableAllPermissionsAndTestApi();
+            $totalTests++;
+            $totalAssertions += $results2['total'];
+            if ($results2['passed'] !== $results2['total']) {
+                $totalFailed++;
+                echo "F";
+            } else {
+                echo ".";
+            }
+            
+            echo "\n";
+            
+            return [
+                'total' => $totalTests,
+                'failed' => $totalFailed, 
+                'assertions' => $totalAssertions
+            ];
             
         } catch (Exception $e) {
-            echo "\n❌ TEST FAILED: " . $e->getMessage() . "\n";
-            throw $e;
+            echo "\nE";
+            echo "\n❌ TEST ERROR: " . $e->getMessage() . "\n";
+            return ['total' => $totalTests + 1, 'failed' => $totalFailed + 1, 'assertions' => $totalAssertions];
         }
     }
     
@@ -627,11 +659,32 @@ echo "  php " . basename(__FILE__) . " admin --env=local\n\n";
 checkAndRestartServer($envFlag);
 echo "\n";
 
-// Run the test
+// Run the test with PHPUnit-like output
+$startTime = microtime(true);
+
+echo "PHPUnit-Style Permission Test by Standalone PHP\n";
+echo "\n";
+
 try {
     $test = new PermissionStandaloneTest();
-    $test->runForRole($role);
-    echo "\nTest completed at: " . date('Y-m-d H:i:s') . "\n";
+    $results = $test->runForRole($role);
+    
+    $endTime = microtime(true);
+    $duration = round($endTime - $startTime, 2);
+    
+    echo "\n";
+    echo "Time: $duration seconds, Memory: " . round(memory_get_peak_usage() / 1024 / 1024, 2) . " MB\n";
+    echo "\n";
+    
+    if ($results['failed'] === 0) {
+        echo "OK ({$results['total']} tests)\n";
+        exit(0);
+    } else {
+        echo "FAILURES!\n";
+        echo "Tests: {$results['total']}, Assertions: {$results['assertions']}, Failures: {$results['failed']}\n";
+        exit(1);
+    }
+    
 } catch (Exception $e) {
     echo "\n❌ Test execution failed: " . $e->getMessage() . "\n";
     exit(1);

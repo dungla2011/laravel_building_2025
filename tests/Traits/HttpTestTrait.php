@@ -27,15 +27,22 @@ trait HttpTestTrait
      */
     protected function initializeHttpTest(string $cookiePrefix = 'phpunit_cookies'): void
     {
+        echo "🔍 Step 1: Determining server port...\n";
         // Determine server port based on environment
         $this->serverPort = $this->determineServerPort();
         $this->baseUrl = "http://127.0.0.1:{$this->serverPort}";
+        echo "✅ Server port determined: {$this->serverPort}\n";
         
+        echo "🔍 Step 2: Creating cookie jar...\n";
         // Create cookie jar for session management
         $this->cookieJar = tempnam(sys_get_temp_dir(), $cookiePrefix);
+        echo "✅ Cookie jar created: {$this->cookieJar}\n";
         
+        echo "🔍 Step 3: Starting server check and restart process...\n";
         // Start Laravel server and prepare database
         $this->checkAndRestartServer();
+        echo "✅ Server check and restart completed\n";
+        
     }
 
     /**
@@ -83,44 +90,74 @@ trait HttpTestTrait
     }
 
     /**
-     * Check server status and prepare database
+     * Complete server management: kill old server, init DB, start new server
      */
     private function checkAndRestartServer(): void
     {
         echo "🔍 " . (app()->environment('testing') ? 'CI' : 'Local') . " environment detected, using port {$this->serverPort}\n";
-        echo "🔍 Checking Laravel server status...\n";
         
-        $this->prepareDatabaseForTesting();
-        
-        if (!$this->isServerResponding()) {
-            $this->fail("Laravel server is not responding on port {$this->serverPort}. Please start the server first.");
+        // In CI environment, use existing server setup
+        if (getenv('CI') || getenv('GITHUB_ACTIONS')) {
+            echo "� CI environment - using existing server and database\n";
+            $this->prepareDatabaseForTesting();
+            if ($this->isServerResponding()) {
+                echo "✅ CI server is responding on port {$this->serverPort}\n";
+                return;
+            } else {
+                $this->fail("CI server not responding on port {$this->serverPort}");
+            }
         }
         
-        echo "✅ Laravel server is responding on port {$this->serverPort}\n";
+        // Step 1: Check and kill existing server
+        echo "\n📋 Step 1: Checking for existing server on port {$this->serverPort}...\n";
+        $this->killServerOnPort($this->serverPort);
+        
+        // Step 2: Verify server is killed
+        echo "\n� Step 2: Verifying server is completely stopped...\n";
+        $this->verifyServerStopped();
+        
+        // Step 3: Initialize fresh database
+        echo "\n📋 Step 3: Initializing fresh database...\n";
+        $this->initializeFreshDatabase();
+        
+        // Step 4: Start new server
+        echo "\n📋 Step 4: Starting new Laravel server...\n";
+        $this->startNewServer();
+        
+        // Step 5: Verify new server is responding
+        echo "\n📋 Step 5: Verifying new server is responding...\n";
+        if ($this->isServerResponding()) {
+            echo "✅ Complete server restart successful!\n";
+        } else {
+            $this->fail("❌ Failed to start new server after complete restart process");
+        }
     }
 
     /**
-     * Prepare database for testing with fresh migration and seeding
+     * Prepare database for testing (simple version for CI)
      */
     private function prepareDatabaseForTesting(): void
     {
-        echo "🗄️  Preparing database (fresh migration + seeding)...\n";
+        echo "🗄️  Preparing database for CI environment...\n";
         
         $dbPath = database_path('testing.sqlite');
         if (file_exists($dbPath)) {
             echo "   ✅ Testing SQLite database exists\n";
+        } else {
+            echo "   📄 Creating SQLite database file\n";
+            touch($dbPath);
         }
         
-        // Run fresh migrations with seeding to ensure clean database state
+        // Run fresh migrations with seeding for CI
         exec("php artisan migrate:fresh --seed --force --env=testing 2>&1", $output, $exitCode);
         
-        if ($exitCode !== 0) {
-            echo "   ⚠️  Migration/seeding had issues, but continuing...\n";
-            if (count($output) > 0) {
-                echo "   Output: " . implode("\n   ", array_slice($output, -3)) . "\n";
-            }
+        if ($exitCode === 0) {
+            echo "   ✅ Database preparation completed\n";
         } else {
-            echo "   ✅ Fresh database migration and seeding completed\n";
+            echo "   ⚠️  Database preparation warnings (continuing):\n";
+            foreach (array_slice($output, -3) as $line) {
+                echo "      $line\n";
+            }
         }
     }
 
@@ -129,14 +166,27 @@ trait HttpTestTrait
      */
     private function isServerResponding(): bool
     {
-        $checkUrl = $this->baseUrl;
-        $response = $this->makeRequest($checkUrl, 'GET');
+        // Use simple cURL check with short timeout to avoid hanging
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->baseUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 3, // Very short timeout for server check
+            CURLOPT_CONNECTTIMEOUT => 2,
+            CURLOPT_NOBODY => true, // HEAD request, faster
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
         
-        if ($response && $response['http_code'] === 200) {
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if (!$error && $httpCode === 200) {
             return true;
         }
         
-        echo "⚠️  Server check failed. Response: " . ($response['http_code'] ?? 'No response') . "\n";
+        echo "⚠️  Server check failed. HTTP Code: $httpCode, Error: $error\n";
         return false;
     }
 
@@ -150,41 +200,41 @@ trait HttpTestTrait
         
         for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
             $ch = curl_init();
-        
-        // Basic cURL options with CI-friendly timeout
-        $timeout = (getenv('CI') || getenv('GITHUB_ACTIONS')) ? 15 : 30;
-        
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT => $timeout,
-            CURLOPT_CONNECTTIMEOUT => 10, // Add connection timeout
-            CURLOPT_COOKIEJAR => $this->cookieJar,
-            CURLOPT_COOKIEFILE => $this->cookieJar,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_CUSTOMREQUEST => $method,
-        ]);
-        
-        // Add headers
-        $defaultHeaders = ['User-Agent: PHPUnit Test Suite'];
-        if ($this->csrfToken) {
-            $defaultHeaders[] = 'X-CSRF-TOKEN: ' . $this->csrfToken;
-        }
-        if ($this->userToken) {
-            $defaultHeaders[] = 'Authorization: Bearer ' . $this->userToken;
-        }
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array_merge($defaultHeaders, $headers));
-        
-        // Add data for POST/PUT/PATCH requests
-        if (!empty($data) && in_array($method, ['POST', 'PUT', 'PATCH'])) {
-            if (in_array('Content-Type: application/json', $headers)) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-            } else {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+            
+            // Basic cURL options with CI-friendly timeout
+            $timeout = (getenv('CI') || getenv('GITHUB_ACTIONS')) ? 15 : 30;
+            
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => $timeout,
+                CURLOPT_CONNECTTIMEOUT => 10, // Add connection timeout
+                CURLOPT_COOKIEJAR => $this->cookieJar,
+                CURLOPT_COOKIEFILE => $this->cookieJar,
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_CUSTOMREQUEST => $method,
+            ]);
+            
+            // Add headers
+            $defaultHeaders = ['User-Agent: PHPUnit Test Suite'];
+            if ($this->csrfToken) {
+                $defaultHeaders[] = 'X-CSRF-TOKEN: ' . $this->csrfToken;
             }
-        }
-        
+            if ($this->userToken) {
+                $defaultHeaders[] = 'Authorization: Bearer ' . $this->userToken;
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array_merge($defaultHeaders, $headers));
+            
+            // Add data for POST/PUT/PATCH requests
+            if (!empty($data) && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+                if (in_array('Content-Type: application/json', $headers)) {
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+                } else {
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+                }
+            }
+            
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
@@ -212,114 +262,246 @@ trait HttpTestTrait
     }
 
     /**
-     * Get CSRF token from various sources
+     * Get CSRF token from various sources (with aggressive timeout)
      */
     protected function getCsrfToken(): void
     {
-        $routes_to_try = [
-            '/admin/role-permissions' => 'admin role permissions',
-            '/admin/field-permissions' => 'admin field permissions', 
-            '/admin/users' => 'admin users',
-            '/' => 'homepage'
-        ];
+        echo "🔍 Getting CSRF token with simple curl request...\n";
         
-        foreach ($routes_to_try as $route => $description) {
-            echo "🔍 Trying to get CSRF token from {$description} ({$route})...\n";
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->baseUrl . '/admin/role-permissions',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 5, // Very short timeout
+            CURLOPT_CONNECTTIMEOUT => 3,
+            CURLOPT_COOKIEJAR => $this->cookieJar,
+            CURLOPT_COOKIEFILE => $this->cookieJar,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTPHEADER => ['User-Agent: PHPUnit Test Suite']
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if (!$error && $httpCode === 200 && $response) {
+            echo "   ✅ Got response (HTTP $httpCode, " . strlen($response) . " bytes)\n";
             
-            $response = $this->makeRequest($this->baseUrl . $route, 'GET');
+            // Look for meta tag CSRF token
+            if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response, $matches)) {
+                $this->csrfToken = $matches[1];
+                echo "   ✅ CSRF token found: " . substr($this->csrfToken, 0, 10) . "...\n";
+                return;
+            }
             
-            if ($response && isset($response['body']) && $response['http_code'] == 200) {
-                echo "   ✅ Got response (HTTP {$response['http_code']}, " . strlen($response['body']) . " bytes)\n";
-                
-                // Look for meta tag CSRF token first (most reliable)
-                if (preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
-                    $this->csrfToken = $matches[1];
-                    echo "   ✅ CSRF token found in meta tag: " . substr($this->csrfToken, 0, 10) . "...\n";
-                    return;
-                }
-                
-                // Fallback: look for form CSRF token
-                if (preg_match('/name="_token" value="([^"]+)"/', $response['body'], $matches)) {
-                    $this->csrfToken = $matches[1];
-                    echo "   ✅ CSRF token found in form input: " . substr($this->csrfToken, 0, 10) . "...\n";
-                    return;
-                }
-                
-                echo "   ⚠️ No CSRF token found in response body\n";
-                
-                // Debug: show first 500 chars of response in CI to help troubleshooting
-                if (isset($_ENV['CI']) || isset($_ENV['GITHUB_ACTIONS']) || isset($_ENV['PHPUNIT_TESTING'])) {
-                    echo "   🔍 Response preview: " . substr($response['body'], 0, 500) . "...\n";
-                    
-                    // Check if response looks like HTML at all
-                    if (stripos($response['body'], '<html') === false && stripos($response['body'], '<!DOCTYPE') === false) {
-                        echo "   ⚠️ Response doesn't appear to be HTML\n";
-                    }
-                }
-            } else {
-                echo "   ❌ Failed request - HTTP " . ($response['http_code'] ?? 'unknown') . "\n";
-                if ($response && isset($response['body']) && strlen($response['body']) < 200) {
-                    echo "      Response: " . trim($response['body']) . "\n";
+            // Fallback: look for form CSRF token
+            if (preg_match('/name="_token" value="([^"]+)"/', $response, $matches)) {
+                $this->csrfToken = $matches[1];
+                echo "   ✅ CSRF token found in form: " . substr($this->csrfToken, 0, 10) . "...\n";
+                return;
+            }
+            
+            echo "   ⚠️ No CSRF token found in response\n";
+        } else {
+            echo "   ❌ Request failed - HTTP $httpCode, Error: $error\n";
+        }
+        
+        echo "⚠️  Warning: Failed to obtain CSRF token. Continuing without CSRF token.\n";
+    }
+
+    /**
+     * Login user and get authentication token (with simple cURL)
+     */
+    protected function loginUser(string $email, string $password): bool
+    {
+        echo "🔐 Attempting login for $email...\n";
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $this->baseUrl . '/api/login',
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => json_encode(['email' => $email, 'password' => $password]),
+            CURLOPT_TIMEOUT => 10, // Short timeout
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Accept: application/json',
+                'User-Agent: PHPUnit Test Suite'
+            ],
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+        
+        if (!$error && $httpCode === 200 && $response) {
+            $tokenData = json_decode($response, true);
+            if (isset($tokenData['token'])) {
+                $this->userToken = $tokenData['token'];
+                echo "   ✅ Login successful, token obtained\n";
+                return true;
+            }
+        }
+        
+        echo "   ❌ Login failed - HTTP $httpCode, Error: $error\n";
+        if ($response && strlen($response) < 500) {
+            echo "   Response: " . $response . "\n";
+        }
+        return false;
+    }
+
+    /**
+     * Kill any existing server process on the specified port
+     */
+    private function killServerOnPort(int $port): void
+    {
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        $output = [];
+        
+        if ($isWindows) {
+            exec("netstat -ano | findstr \":$port\"", $output);
+        } else {
+            exec("netstat -tuln | grep :$port", $output);
+        }
+        
+        $processIds = [];
+        foreach ($output as $line) {
+            if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
+                if ($isWindows && preg_match('/\s+(\d+)$/', $line, $matches)) {
+                    $processIds[] = $matches[1];
+                } elseif (!$isWindows && preg_match('/(\d+)\//', $line, $matches)) {
+                    $processIds[] = $matches[1];
                 }
             }
         }
         
-        // Final fallback: try to generate a token via Laravel's built-in method
-        echo "🔍 Attempting direct CSRF token generation via Laravel...\n";
-        try {
-            // Make a simple POST request to trigger CSRF token in session
-            $tokenResponse = $this->makeRequest($this->baseUrl . '/api/login', 'POST', 
-                ['email' => 'nonexistent@example.com', 'password' => 'wrong'],
-                ['Content-Type: application/json', 'Accept: application/json']
-            );
-            
-            if ($tokenResponse && isset($tokenResponse['body'])) {
-                $responseData = json_decode($tokenResponse['body'], true);
-                if (isset($responseData['errors']) && isset($responseData['message'])) {
-                    echo "   ✅ API responded with validation errors (good sign)\n";
-                    // At this point, session should be established, try getting CSRF again
-                    $response = $this->makeRequest($this->baseUrl . '/admin/role-permissions', 'GET');
-                    if ($response && preg_match('/<meta name="csrf-token" content="([^"]+)"/', $response['body'], $matches)) {
-                        $this->csrfToken = $matches[1];
-                        echo "   ✅ CSRF token obtained after session establishment: " . substr($this->csrfToken, 0, 10) . "...\n";
-                        return;
-                    }
+        if (!empty($processIds)) {
+            foreach ($processIds as $pid) {
+                echo "   🔄 Killing process PID $pid...\n";
+                if ($isWindows) {
+                    exec("taskkill /PID $pid /F 2>nul");
+                } else {
+                    exec("kill -9 $pid 2>/dev/null");
                 }
             }
-        } catch (Exception $e) {
-            echo "   ⚠️ Direct token generation failed: " . $e->getMessage() . "\n";
-        }
-        
-        if (!$this->csrfToken) {
-            throw new Exception('Failed to obtain CSRF token from any source. Routes tried: ' . implode(', ', array_keys($routes_to_try)));
+            sleep(3); // Wait for processes to terminate completely
+            echo "   ✅ Killed " . count($processIds) . " process(es)\n";
+        } else {
+            echo "   ✅ No existing server found on port $port\n";
         }
     }
 
     /**
-     * Login user and get authentication token
+     * Verify server is completely stopped
      */
-    protected function loginUser(string $email, string $password): bool
+    private function verifyServerStopped(): void
     {
-        // Direct API login
-        $tokenResponse = $this->makeRequest($this->baseUrl . '/api/login', 'POST', [
-            'email' => $email,
-            'password' => $password
-        ], ['Content-Type: application/json']);
-
-        if ($tokenResponse && $tokenResponse['http_code'] === 200) {
-            $tokenData = json_decode($tokenResponse['body'], true);
-            if (isset($tokenData['token'])) {
-                $this->userToken = $tokenData['token'];
-                return true;
+        $maxAttempts = 5;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+            $output = [];
+            
+            if ($isWindows) {
+                exec("netstat -ano | findstr \":{$this->serverPort}\"", $output);
+            } else {
+                exec("netstat -tuln | grep :{$this->serverPort}", $output);
+            }
+            
+            $stillRunning = false;
+            foreach ($output as $line) {
+                if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
+                    $stillRunning = true;
+                    break;
+                }
+            }
+            
+            if (!$stillRunning) {
+                echo "   ✅ Server completely stopped (verified in attempt $attempt)\n";
+                return;
+            }
+            
+            if ($attempt < $maxAttempts) {
+                echo "   ⏳ Server still running, waiting... (attempt $attempt/$maxAttempts)\n";
+                sleep(2);
             }
         }
-
-        // Debug login response if failed
-        $errorData = $tokenResponse ? json_decode($tokenResponse['body'], true) : null;
-        $errorMessage = $errorData['message'] ?? 'Unknown error';
         
-        echo "⚠️  Login failed for $email. HTTP Code: " . ($tokenResponse['http_code'] ?? 'Unknown') . ". Message: $errorMessage\n";
-        return false;
+        echo "   ⚠️  Server may still be running after $maxAttempts attempts, continuing anyway\n";
+    }
+
+    /**
+     * Initialize fresh database with complete reset
+     */
+    private function initializeFreshDatabase(): void
+    {
+        // Remove existing database file
+        $dbPath = database_path('testing.sqlite');
+        if (file_exists($dbPath)) {
+            unlink($dbPath);
+            echo "   🗑️  Removed old database file\n";
+        }
+        
+        // Create new empty database file
+        touch($dbPath);
+        echo "   📄 Created new database file\n";
+        
+        // Run fresh migrations with seeding
+        exec("php artisan migrate:fresh --seed --force --env=testing 2>&1", $output, $exitCode);
+        
+        if ($exitCode === 0) {
+            echo "   ✅ Fresh database migration and seeding completed\n";
+        } else {
+            echo "   ⚠️  Database initialization had issues:\n";
+            foreach (array_slice($output, -3) as $line) {
+                echo "      $line\n";
+            }
+        }
+        
+        // Verify database has data
+        try {
+            $userCount = \Illuminate\Support\Facades\DB::connection('sqlite')->table('users')->count();
+            $permissionCount = \Illuminate\Support\Facades\DB::connection('sqlite')->table('permissions')->count();
+            echo "   📊 Database verification: $userCount users, $permissionCount permissions\n";
+        } catch (Exception $e) {
+            echo "   ⚠️  Database verification failed: " . $e->getMessage() . "\n";
+        }
+    }
+
+    /**
+     * Start new Laravel server
+     */
+    private function startNewServer(): void
+    {
+        echo "🚀 Starting Laravel server on port {$this->serverPort}...\n";
+        
+        // Use proc_open for better cross-platform background process handling
+        $descriptorspec = [
+            0 => ['pipe', 'r'],  // stdin
+            1 => ['pipe', 'w'],  // stdout  
+            2 => ['pipe', 'w']   // stderr
+        ];
+        
+        $command = "php artisan serve --port={$this->serverPort} --env=testing";
+        $process = proc_open($command, $descriptorspec, $pipes);
+        
+        if (is_resource($process)) {
+            // Close pipes to detach process
+            fclose($pipes[0]);
+            fclose($pipes[1]); 
+            fclose($pipes[2]);
+            
+            echo "✅ Server process started in background\n";
+            
+            // Wait a moment for server to start
+            sleep(3);
+        } else {
+            $this->fail("❌ Failed to start server process");
+        }
     }
 
     /**

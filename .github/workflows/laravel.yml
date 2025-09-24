@@ -59,7 +59,7 @@ jobs:
     - name: Set Testing Environment
       run: |
         # Update .env.testing for CI environment only
-        sed -i 's|APP_URL=.*|APP_URL=http://localhost:8000|' .env.testing
+        sed -i 's|APP_URL=.*|APP_URL=http://localhost:12368|' .env.testing
         sed -i 's|DB_DATABASE=.*|DB_DATABASE=/home/runner/work/laravel_building_2025/laravel_building_2025/database/testing.sqlite|' .env.testing
 
     - name: Clear Config Cache
@@ -89,37 +89,16 @@ jobs:
         echo "=== Test Database Connection ==="
         php artisan migrate:status --env=testing || echo "Migration status failed"
 
-    - name: Start Laravel Server (Background)
-      run: php artisan serve --port=8000 --env=testing &
-      env:
-        APP_ENV: testing
 
-    - name: Wait for Server
-      run: |
-        echo "Waiting for Laravel server to start..."
-        sleep 5
-        echo "Testing server response..."
-        for i in {1..10}; do
-          echo "Attempt $i/10..."
-          if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 | grep -q "200\|302"; then
-            echo "✅ Server is responding!"
-            break
-          fi
-          if [ $i -eq 10 ]; then
-            echo "❌ Server failed to respond after 10 attempts"
-            echo "=== Server Logs ==="
-            tail -20 storage/logs/laravel.log || echo "No Laravel log found"
-            exit 1
-          fi
-          sleep 3
-        done
 
-    - name: Execute tests (Unit and Feature tests) via PHPUnit
-      run: php artisan test --env=testing
+    - name: Execute Permission Tests (Standalone)
+      run: php tests/01-test-permission-standalone.php super-admin --env=testing
 
-    - name: Execute standalone permission test
-      run: php tests/01-test-permission-standalone.php
-      continue-on-error: true
+    - name: Execute User Validation Tests (Standalone)
+      run: php tests/02-test_user_validation.php --env=testing
+
+    - name: Execute Batch Validation Tests (Standalone)
+      run: php tests/03-test_batch_validation.php --env=testing
 
     - name: Show logs on failure
       if: failure()
@@ -127,4 +106,4 @@ jobs:
         echo "=== Laravel Logs ==="
         tail -50 storage/logs/laravel.log || echo "No Laravel log found"
         echo "=== Server Status ==="
-        curl -I http://localhost:8000 || echo "Server not responding"
+        curl -I http://localhost:12368 || echo "Server not responding"

@@ -23,7 +23,6 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
-        die("1111");
         $userId = $this->route('user'); // Get user ID from route parameter
         
         // If validation is disabled in environment, return minimal rules
