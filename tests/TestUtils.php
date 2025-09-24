@@ -45,8 +45,11 @@ class TestUtils
     
     /**
      * Check if port is in use and restart Laravel server if needed
+     * 
+     * @param string $envFlag Environment flag (e.g., '--env=testing')
+     * @param bool $forceKill Always kill existing server process if found
      */
-    public static function checkAndRestartServer(string $envFlag = ''): void
+    public static function checkAndRestartServer(string $envFlag = '', bool $forceKill = true): void
     {
         echo "🔍 Checking Laravel server status...\n";
         
@@ -82,7 +85,11 @@ class TestUtils
         }
         
         // Run fresh migration with seeding in one command
-        exec("php artisan migrate:fresh --seed --force$envFlag 2>&1", $output, $exitCode);
+        $migrationCommand = "php artisan migrate:fresh --seed --force";
+        if (!empty($envFlag)) {
+            $migrationCommand .= " $envFlag";
+        }
+        exec("$migrationCommand 2>&1", $output, $exitCode);
         
         if ($exitCode === 0) {
             echo "   ✅ Fresh database migration and seeding completed\n";
@@ -124,29 +131,92 @@ class TestUtils
             }
             echo "\n";
             
-            // Test if it's actually Laravel responding
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, self::$baseUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
-            curl_setopt($ch, CURLOPT_NOBODY, true);
+            $shouldKill = $forceKill;
             
-            $result = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
-            
-            if ($httpCode === 200) {
-                echo "✅ Laravel server is responding on port ".self::$serverPort."\n";
-                return;
+            if (!$forceKill) {
+                // Test if it's actually Laravel responding
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, self::$baseUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+                curl_setopt($ch, CURLOPT_NOBODY, true);
+                
+                $result = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if ($httpCode === 200) {
+                    echo "✅ Laravel server is responding on port ".self::$serverPort."\n";
+                    return;
+                } else {
+                    echo "❌ Port ".self::$serverPort." occupied but not responding to Laravel requests\n";
+                    $shouldKill = true;
+                }
             } else {
-                echo "❌ Port ".self::$serverPort." occupied but not responding to Laravel requests\n";
+                echo "🔄 Force kill mode enabled - will restart server\n";
             }
             
             // Kill the process to restart with fresh code
-            if ($processId && $isWindows) {
-                echo "🔄 Killing process $processId to restart with fresh code...\n";
-                exec("taskkill /PID $processId /F 2>nul", $killOutput);
-                sleep(2); // Wait for process to terminate
+            if ($shouldKill && $processId) {
+                if ($isWindows) {
+                    echo "🔄 Killing process $processId to restart with fresh code...\n";
+                    
+                    // Use more direct taskkill approach
+                    exec("taskkill /PID $processId /F /T", $killOutput, $killExitCode);
+                    
+                    if ($killExitCode !== 0) {
+                        echo "   Trying alternative kill method...\n";
+                        // Kill by port using more robust command
+                        $killCmd = 'for /f "tokens=5" %p in (\'netstat -ano ^| find ":'.self::$serverPort.'" ^| find "LISTENING"\') do taskkill /PID %p /F /T';
+                        exec($killCmd, $altKillOutput);
+                    }
+                } else {
+                    echo "🔄 Killing process $processId to restart with fresh code...\n";
+                    exec("kill -TERM $processId", $killOutput, $killExitCode);
+                    
+                    // If TERM fails, use KILL
+                    if ($killExitCode !== 0) {
+                        sleep(1);
+                        exec("kill -KILL $processId", $killOutput2);
+                    }
+                }
+                
+                // Wait for process to terminate
+                sleep(2);
+                
+                // Verify process is killed (simpler check)
+                $verifyAttempts = 0;
+                $maxVerifyAttempts = 3;
+                
+                while ($verifyAttempts < $maxVerifyAttempts) {
+                    $output = [];
+                    if ($isWindows) {
+                        exec("netstat -ano | findstr \":".self::$serverPort.'"', $output);
+                    } else {
+                        exec('netstat -tuln | grep :'.self::$serverPort, $output);
+                    }
+                    
+                    $stillRunning = false;
+                    foreach ($output as $line) {
+                        if (strpos($line, 'LISTENING') !== false || strpos($line, 'LISTEN') !== false) {
+                            $stillRunning = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!$stillRunning) {
+                        echo "✅ Process killed successfully\n";
+                        break;
+                    }
+                    
+                    $verifyAttempts++;
+                    if ($verifyAttempts < $maxVerifyAttempts) {
+                        echo "   ⏳ Waiting for process to terminate...\n";
+                        sleep(1);
+                    } else {
+                        echo "⚠️  Process may still be running, continuing anyway...\n";
+                    }
+                }
             }
         }
         
@@ -160,7 +230,10 @@ class TestUtils
             2 => ['pipe', 'w']   // stderr
         ];
         
-        $command = "php artisan serve --port=".self::$serverPort."$envFlag";
+        $command = "php artisan serve --port=".self::$serverPort;
+        if (!empty($envFlag)) {
+            $command .= " $envFlag";
+        }
         $process = proc_open($command, $descriptorspec, $pipes);
         
         if (is_resource($process)) {

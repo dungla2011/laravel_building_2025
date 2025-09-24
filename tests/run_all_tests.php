@@ -88,10 +88,9 @@ class TestRunner
             echo "📋 Command: $command\n";
         }
         
-        // Execute test
+        // Execute test with real-time output
         $output = [];
-        $exitCode = 0;
-        exec($command . ' 2>&1', $output, $exitCode);
+        $exitCode = $this->runCommandWithRealTimeOutput($command, $output);
         
         $endTime = microtime(true);
         $duration = round($endTime - $startTime, 2);
@@ -101,25 +100,6 @@ class TestRunner
         $testResult['file'] = $testName;
         $testResult['duration'] = $duration;
         $testResult['exit_code'] = $exitCode;
-        
-        // Display output
-        if ($this->verbose || $exitCode !== 0) {
-            foreach ($output as $line) {
-                echo $line . "\n";
-            }
-        } else {
-            // Show only summary lines for successful tests
-            $summaryLines = array_filter($output, function($line) {
-                return strpos($line, 'PHPUnit-Style') !== false ||
-                       strpos($line, 'Time:') !== false ||
-                       strpos($line, 'OK (') !== false ||
-                       strpos($line, 'FAILURES!') !== false ||
-                       strpos($line, 'Tests:') !== false;
-            });
-            foreach ($summaryLines as $line) {
-                echo $line . "\n";
-            }
-        }
         
         echo "\n📊 Test Result: ";
         if ($exitCode === 0) {
@@ -250,8 +230,16 @@ class TestRunner
              ($this->envFlag ? " with environment: {$this->envFlag}" : "") . "\n\n";
         
         foreach ($this->testFiles as $testFile) {
+            if ($this->verbose) {
+                echo "🔧 DEBUG: About to run test file: {$testFile['name']}\n";
+            }
+            
             $result = $this->runTestFile($testFile);
             $this->results[] = $result;
+            
+            if ($this->verbose) {
+                echo "🔧 DEBUG: Completed test file: {$testFile['name']}, continuing to next...\n";
+            }
         }
         
         $this->displaySummary();
@@ -259,6 +247,29 @@ class TestRunner
         // Return appropriate exit code
         $failedCount = count(array_filter($this->results, fn($r) => !$r['passed']));
         return $failedCount === 0 ? 0 : 1;
+    }
+    
+    /**
+     * Run command with real-time output using system()
+     */
+    private function runCommandWithRealTimeOutput(string $command, array &$output): int
+    {
+        if ($this->verbose) {
+            echo "🔧 DEBUG: Starting command: $command\n";
+        }
+        
+        // Use system() for real-time output - simpler and more reliable
+        $exitCode = 0;
+        system($command, $exitCode);
+        
+        // For parsing, we still need to capture output separately
+        exec($command . ' 2>&1', $output);
+        
+        if ($this->verbose) {
+            echo "🔧 DEBUG: Command completed with exit code: $exitCode\n";
+        }
+        
+        return $exitCode;
     }
 }
 
