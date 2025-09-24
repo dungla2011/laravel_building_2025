@@ -16,11 +16,20 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
         
+        //Khong dung duoc cai nay, L12 khong con:
         // Use custom CSRF middleware that bypasses verification in testing
-        $middleware->replace(
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-            \App\Http\Middleware\VerifyCsrfToken::class
-        );
+        // $middleware->replace(
+        //     \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
+        //     \App\Http\Middleware\VerifyCsrfToken::class
+        // );
+
+        // Exclude CSRF check for admin routes entirely
+        
+        $middleware->validateCsrfTokens(except: [
+            'admin/*',
+            'api/*',
+        ]);
+        
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
