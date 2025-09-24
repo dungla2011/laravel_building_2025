@@ -16,13 +16,78 @@ class TestSuiteRunner
     private float $startTime;
     private string $envFlag = '';
     private bool $verbose = false;
-    
+    private $backgroundKillerProcess = null;
     public function __construct()
     {
         $this->testsDir = __DIR__;
         $this->startTime = microtime(true);
     }
     
+    private function startBackgroundKiller(): void
+    {
+        $isWindows = strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+        
+        if (!$isWindows) {
+            echo "ℹ️  Background killer not needed on this platform\n";
+            return;
+        }
+        
+        $killerScript = $this->testsDir . '/kill_process.php';
+        $pidFile = $this->testsDir . '/pid.txt';
+        
+        if (!file_exists($killerScript)) {
+            echo "⚠️  Background killer script not found: $killerScript\n";
+            die();
+        }
+        
+        // Clear any existing PID file
+        if (file_exists($pidFile)) {
+            file_put_contents($pidFile, '');
+        }
+        
+        // Check if killer is already running
+        exec('tasklist /FI "IMAGENAME eq php.exe" /FO CSV | findstr "kill_process.php"', $output);
+        if (!empty($output)) {
+            echo "✅ Background killer already running\n";
+            return;
+        }
+        
+        echo "🚀 Starting background process killer monitor...\n";
+        
+        // Use proc_open to start background process (works in PowerShell)
+        $descriptorspec = [
+            0 => ['pipe', 'r'],
+            1 => ['file', 'nul', 'w'],  // Redirect stdout to null
+            2 => ['file', 'nul', 'w']   // Redirect stderr to null
+        ];
+        
+        $command = "php \"$killerScript\"";
+        $process = proc_open($command, $descriptorspec, $pipes);
+        
+        if (is_resource($process)) {
+            fclose($pipes[0]);
+            echo "   ✅ Background killer started successfully\n";
+            
+            // Store process handle for cleanup later
+            $this->backgroundKillerProcess = $process;
+        } else {
+            echo "   ⚠️  Failed to start background killer\n";
+        }
+        
+        // Give it a moment to start
+        sleep(1);
+        
+        // Verify it started
+        exec('tasklist /FI "IMAGENAME eq php.exe" /FI "WINDOWTITLE eq kill_process.php" /FO CSV', $verifyOutput);
+        if (!empty($verifyOutput) && count($verifyOutput) > 1) {
+            echo "✅ Background killer started successfully\n";
+        } else {
+            echo "⚠️  Could not verify background killer startup (continuing anyway)\n";
+        }
+        
+        echo "\n";
+    }
+
     /**
      * Parse command line arguments
      */
@@ -201,6 +266,9 @@ class TestSuiteRunner
     public function run(array $argv): int
     {
         $this->parseArguments($argv);
+        
+        $this->startBackgroundKiller();
+
         $this->discoverTestFiles();
         
         if (empty($this->testFiles)) {
