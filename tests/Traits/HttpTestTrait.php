@@ -141,18 +141,25 @@ trait HttpTestTrait
     }
 
     /**
-     * Make HTTP request using cURL
+     * Make HTTP request using cURL with retry logic for CI
      */
     protected function makeRequest(string $url, string $method = 'GET', array $data = [], array $headers = []): ?array
     {
-        $ch = curl_init();
+        $maxRetries = (getenv('CI') || getenv('GITHUB_ACTIONS')) ? 2 : 1;
+        $lastError = null;
         
-        // Basic cURL options
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init();
+        
+        // Basic cURL options with CI-friendly timeout
+        $timeout = (getenv('CI') || getenv('GITHUB_ACTIONS')) ? 15 : 30;
+        
         curl_setopt_array($ch, [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_TIMEOUT => 30,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => 10, // Add connection timeout
             CURLOPT_COOKIEJAR => $this->cookieJar,
             CURLOPT_COOKIEFILE => $this->cookieJar,
             CURLOPT_SSL_VERIFYPEER => false,
@@ -178,20 +185,30 @@ trait HttpTestTrait
             }
         }
         
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-        
-        if ($error) {
-            echo "⚠️  cURL Error: $error\n";
-            return null;
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+            
+            if (!$error && $httpCode !== 0) {
+                // Success
+                return [
+                    'body' => $response,
+                    'http_code' => $httpCode
+                ];
+            } else {
+                // Error occurred
+                $lastError = $error ?: "HTTP Code: $httpCode";
+                if ($attempt < $maxRetries) {
+                    echo "⚠️  Attempt $attempt failed: $lastError. Retrying...\n";
+                    sleep(1); // Brief pause before retry
+                } else {
+                    echo "⚠️  cURL Error after $maxRetries attempts: $lastError\n";
+                }
+            }
         }
         
-        return [
-            'body' => $response,
-            'http_code' => $httpCode
-        ];
+        return null;
     }
 
     /**
