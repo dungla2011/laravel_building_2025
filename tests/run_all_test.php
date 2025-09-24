@@ -31,8 +31,8 @@ class TestSuiteRunner
             echo "ℹ️  Background killer not needed on this platform\n";
             return;
         }
-        
-        $killerScript = $this->testsDir . '/kill_process.php';
+
+        $killerScript = $this->testsDir . '/kill_process_loop.php';
         $pidFile = $this->testsDir . '/pid.txt';
         
         if (!file_exists($killerScript)) {
@@ -46,7 +46,7 @@ class TestSuiteRunner
         }
         
         // Check if killer is already running
-        exec('tasklist /FI "IMAGENAME eq php.exe" /FO CSV | findstr "kill_process.php"', $output);
+        exec('tasklist /FI "IMAGENAME eq php.exe" /FO CSV | findstr "kill_process_loop.php"', $output);
         if (!empty($output)) {
             echo "✅ Background killer already running\n";
             return;
@@ -78,7 +78,7 @@ class TestSuiteRunner
         sleep(1);
         
         // Verify it started
-        exec('tasklist /FI "IMAGENAME eq php.exe" /FI "WINDOWTITLE eq kill_process.php" /FO CSV', $verifyOutput);
+        exec('tasklist /FI "IMAGENAME eq php.exe" /FI "WINDOWTITLE eq kill_process_loop.php" /FO CSV', $verifyOutput);
         if (!empty($verifyOutput) && count($verifyOutput) > 1) {
             echo "✅ Background killer started successfully\n";
         } else {

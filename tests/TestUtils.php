@@ -11,6 +11,49 @@
  * - PHPUnit-style output formatting
  */
 
+// Environment file loader
+function loadEnvironmentFile($envFlag = '') {
+    $envFile = '.env';
+    
+    // Determine which .env file to load based on flag
+    if (strpos($envFlag, 'testing') !== false) {
+        $envFile = '.env.testing';
+    } elseif (strpos($envFlag, 'local') !== false) {
+        $envFile = '.env.local';
+    }
+    
+    // Look for .env file in project root (one level up from tests/)
+    $envPath = __DIR__ . '/../' . $envFile;
+    
+    if (file_exists($envPath)) {
+        $lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        foreach ($lines as $line) {
+            if (strpos($line, '#') === 0) continue; // Skip comments
+            if (strpos($line, '=') !== false) {
+                list($key, $value) = explode('=', $line, 2);
+                $key = trim($key);
+                $value = trim($value, " \t\n\r\0\x0B\"'"); // Remove quotes
+                putenv("$key=$value");
+                $_ENV[$key] = $value;
+            }
+        }
+    }
+}
+
+
+// Fallback env() function if Laravel is not available
+if (!function_exists('env')) {
+    function env($key, $default = null) {
+        
+        $value = $_ENV[$key];
+        if ($value === false) {
+            return $default;
+        }
+        return $value;
+    }
+}
+
+
 class TestUtils
 {
     public static string $baseUrl = 'http://127.0.0.1:12368';
@@ -53,12 +96,19 @@ class TestUtils
     {
         echo "🔍 Checking Laravel server status...\n";
         
+        // Load the appropriate environment file first
+        loadEnvironmentFile($envFlag);
+        echo "   🌍 Loaded environment: " . ($envFlag ? $envFlag : 'default') . "\n";
+        
         // Always run database migrations and seeders first
         echo "🗄️  Preparing database (fresh migration + seeding)...\n";
         
         // Create SQLite database file if needed
         if (strpos($envFlag, 'testing') !== false) {
             $testingDbPath = 'database/testing.sqlite';
+
+            // Nếu DB_CONNECTION=sqlite thì mới check:
+            if (env('DB_CONNECTION') == 'sqlite')
             if (!file_exists($testingDbPath)) {
                 echo "   Creating testing SQLite database file...\n";
                 if (!is_dir('database')) {
@@ -72,6 +122,7 @@ class TestUtils
         } elseif (strpos($envFlag, 'local') !== false || empty($envFlag)) {
             // Check for local SQLite database
             $localDbPath = 'database/database.sqlite';
+            if (env('DB_CONNECTION') == 'sqlite')
             if (!file_exists($localDbPath)) {
                 echo "   Creating local SQLite database file...\n";
                 if (!is_dir('database')) {
