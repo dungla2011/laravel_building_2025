@@ -52,7 +52,7 @@ laravel.log
 # Database
 *.sqlite
 *.sqlite-journal
-database/database.sqlite
+
 
 # Testing
 /coverage/
