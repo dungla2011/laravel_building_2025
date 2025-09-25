@@ -138,8 +138,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Response data:', data);
                 if (data.success) {
                     console.log('Permission updated successfully');
+                    // Show success toast
+                    showToast('success', 'Permission Updated');
                 } else {
                     console.error('Failed to update permission');
+                    // Show error toast
+                    showToast('error', 'Update Failed', 'Failed to update permission. Please try again.');
                     // Revert UI changes
                     if (newStatus === '1') {
                         this.classList.remove('fa-toggle-on', 'text-success');
@@ -153,44 +157,102 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
+                // Show error toast
+                showToast('error', 'Connection Error', 'Unable to update permission. Please check your connection and try again.');
+                
+                // Revert UI changes
+                if (newStatus === '1') {
+                    this.classList.remove('fa-toggle-on', 'text-success');
+                    this.classList.add('fa-toggle-off', 'text-secondary');
+                } else {
+                    this.classList.remove('fa-toggle-off', 'text-secondary');
+                    this.classList.add('fa-toggle-on', 'text-success');
+                }
+                this.dataset.status = currentStatus;
+                
                 console.log('Trying alternative method...');
                 
-                // Alternative: Use traditional form submission for DevTools compatibility
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/admin/field-permissions';
-                form.style.display = 'none';
+                // // Alternative: Use traditional form submission for DevTools compatibility
+                // const form = document.createElement('form');
+                // form.method = 'POST';
+                // form.action = '/admin/field-permissions';
+                // form.style.display = 'none';
                 
-                const inputs = [
-                    { name: '_token', value: document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                    { name: 'role_id', value: roleId },
-                    { name: 'table_name', value: tableName },
-                    { name: 'field_name', value: fieldName }
-                ];
+                // const inputs = [
+                //     { name: '_token', value: document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                //     { name: 'role_id', value: roleId },
+                //     { name: 'table_name', value: tableName },
+                //     { name: 'field_name', value: fieldName }
+                // ];
                 
-                if (type === 'read') {
-                    inputs.push({ name: 'can_read', value: newStatus });
-                    const writeToggle = document.querySelector(`[data-role="${roleId}"][data-table="${tableName}"][data-field="${fieldName}"][data-type="write"]`);
-                    inputs.push({ name: 'can_write', value: writeToggle ? writeToggle.dataset.status : '0' });
-                } else {
-                    inputs.push({ name: 'can_write', value: newStatus });
-                    const readToggle = document.querySelector(`[data-role="${roleId}"][data-table="${tableName}"][data-field="${fieldName}"][data-type="read"]`);
-                    inputs.push({ name: 'can_read', value: readToggle ? readToggle.dataset.status : '0' });
-                }
+                // if (type === 'read') {
+                //     inputs.push({ name: 'can_read', value: newStatus });
+                //     const writeToggle = document.querySelector(`[data-role="${roleId}"][data-table="${tableName}"][data-field="${fieldName}"][data-type="write"]`);
+                //     inputs.push({ name: 'can_write', value: writeToggle ? writeToggle.dataset.status : '0' });
+                // } else {
+                //     inputs.push({ name: 'can_write', value: newStatus });
+                //     const readToggle = document.querySelector(`[data-role="${roleId}"][data-table="${tableName}"][data-field="${fieldName}"][data-type="read"]`);
+                //     inputs.push({ name: 'can_read', value: readToggle ? readToggle.dataset.status : '0' });
+                // }
                 
-                inputs.forEach(input => {
-                    const inputElement = document.createElement('input');
-                    inputElement.type = 'hidden';
-                    inputElement.name = input.name;
-                    inputElement.value = input.value;
-                    form.appendChild(inputElement);
-                });
+                // inputs.forEach(input => {
+                //     const inputElement = document.createElement('input');
+                //     inputElement.type = 'hidden';
+                //     inputElement.name = input.name;
+                //     inputElement.value = input.value;
+                //     form.appendChild(inputElement);
+                // });
                 
-                document.body.appendChild(form);
-                form.submit();
+                // document.body.appendChild(form);
+                // form.submit();
             });
         });
     });
+    
+    // Toast notification function
+    function showToast(type, title, message = '') {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            console.warn('Toast container not found');
+            return;
+        }
+        
+        const toastId = 'toast-' + Date.now();
+        const iconClass = type === 'success' ? 'fa-check-circle text-success' : 'fa-exclamation-circle text-danger';
+        const bgClass = type === 'success' ? 'border-success' : 'border-danger';
+        
+        // Only include toast-body if message is not empty
+        const toastBodyHtml = message && message.trim() ? `
+                <div class="toast-body">
+                    ${message}
+                </div>` : '';
+        
+        const toastHtml = `
+            <div id="${toastId}" class="toast ${bgClass}" role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="toast-header">
+                    <i class="fas ${iconClass} me-2"></i>
+                    <strong class="me-auto">${title}</strong>
+                    <small class="text-muted">now</small>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>${toastBodyHtml}
+            </div>
+        `;
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+        
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: 5000
+        });
+        
+        toast.show();
+        
+        // Remove toast from DOM after it's hidden
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            toastElement.remove();
+        });
+    }
 });
 </script>
 @endsection
