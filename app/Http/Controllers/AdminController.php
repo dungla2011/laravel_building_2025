@@ -26,7 +26,7 @@ class AdminController extends Controller
         
         return view('admin.index', compact('stats', 'roles'));
     }
-    
+     
     /**
      * Display the admin users page
      */
