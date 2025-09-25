@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
         
+        $middleware->api(append: [
+            \App\Http\Middleware\FieldPermissions::class,
+        ]);
+        
         //Khong dung duoc cai nay, L12 khong con:
         // Use custom CSRF middleware that bypasses verification in testing
         // $middleware->replace(

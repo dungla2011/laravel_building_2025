@@ -38,6 +38,10 @@ class FieldPermissionController extends Controller
             'sessions',
             'user_permissions', 'roles', 'permissions', 'role_user', 'permission_role', 'api_routes', 'field_permissions'
         ];
+
+        $ignoreFields = [
+            'id', 'updated_at', 'deleted_at', 'email_verified_at', 'remember_token'
+        ];
         
         $tables = [];
         
@@ -60,7 +64,8 @@ class FieldPermissionController extends Controller
             
             foreach ($columns as $column) {
                 // Skip system fields like id, created_at, updated_at, etc.
-                if (!in_array($column->Field, ['id', 'created_at', 'updated_at', 'deleted_at', 'email_verified_at', 'remember_token'])) {
+                if (!in_array($column->Field, $ignoreFields)) 
+                {
                     $fields[] = $column->Field;
                 }
             }
