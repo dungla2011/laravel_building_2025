@@ -96,7 +96,7 @@ code {
                 <div class="col-lg-3 col-md-6 mb-3">
                     <div class="card stat-card border-success">
                         <div class="card-body text-center">
-                            
+                            <i class="fas fa-user-shield fa-2x text-success mb-2"></i>
                             <h4 class="text-success">{{ $stats['total_roles'] }}</h4>
                             <p class="text-muted mb-0">System Roles</p>
                         </div>
