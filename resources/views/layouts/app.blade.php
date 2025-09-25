@@ -150,22 +150,28 @@
                             </a>
                             <ul class="dropdown-menu">
                                 <li>
-                                    <a target="_blank" class="dropdown-item" href="{{ route('admin.dashboard') }}">
+                                    <a  class="dropdown-item" href="{{ route('admin.dashboard') }}">
                                         <i class="fas fa-tachometer-alt me-2"></i>
                                         Dashboard
                                     </a>
                                 </li>
                                 <li>
-                                    <a target="_blank" class="dropdown-item" href="{{ route('admin.users') }}">
+                                    <a  class="dropdown-item" href="{{ route('admin.users') }}">
                                         <i class="fas fa-users me-2"></i>
                                         Users
                                     </a>
                                 </li>
             
                                 <li>
-                                    <a target="_blank" class="dropdown-item" href="{{ route('admin.role-permissions.index') }}">
+                                    <a  class="dropdown-item" href="{{ route('admin.role-permissions.index') }}">
                                         <i class="fas fa-users-cog me-2"></i>
                                         Role Permissions
+                                    </a>
+                                </li>
+                                <li>
+                                    <a  class="dropdown-item" href="{{ route('admin.field-permissions') }}">
+                                        <i class="fas fa-table me-2"></i>
+                                        Field Permissions
                                     </a>
                                 </li>
                             </ul>

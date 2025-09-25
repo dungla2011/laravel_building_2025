@@ -53,7 +53,9 @@ Route::prefix('admin')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('admin.dashboard');
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     
-
+    // Field Permissions Routes
+    Route::get('/field-permissions', [App\Http\Controllers\Admin\FieldPermissionController::class, 'index'])->name('admin.field-permissions');
+    Route::post('/field-permissions', [App\Http\Controllers\Admin\FieldPermissionController::class, 'store'])->name('admin.field-permissions.store');
     
     // Role-Permission Management Routes
     Route::prefix('role-permissions')->name('admin.role-permissions.')->group(function () {

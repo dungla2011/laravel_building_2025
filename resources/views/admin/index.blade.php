@@ -227,19 +227,25 @@ code {
                         </div>
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <a href="{{ route('admin.role-permissions.index') }}" class="btn btn-primary w-100">
                                         <i class="fas fa-users-cog me-2"></i>
-                                        Manage Role Permissions
+                                        Role Permissions
                                     </a>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
+                                    <a href="{{ route('admin.field-permissions') }}" class="btn btn-warning w-100">
+                                        <i class="fas fa-table me-2"></i>
+                                        Field Permissions
+                                    </a>
+                                </div>
+                                <div class="col-md-3 mb-3">
                                     <button type="button" class="btn btn-success w-100" onclick="syncPermissions()">
                                         <i class="fas fa-sync-alt me-2"></i>
                                         Sync API Routes
                                     </button>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-3 mb-3">
                                     <button type="button" class="btn btn-info w-100" onclick="exportData()">
                                         <i class="fas fa-download me-2"></i>
                                         Export System Data
