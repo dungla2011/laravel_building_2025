@@ -95,4 +95,8 @@ Route::middleware(['auth:sanctum'])->get('/test-auth', function (Request $reques
 // Orion API Routes with authentication
 Route::middleware(['auth:sanctum'])->group(function () {
     Orion::resource('users', UserController::class);
+    Orion::resource('media', \App\Http\Controllers\Api\MediaController::class);
+    
+    // Simple Media API routes
+    Route::apiResource('simple-media', \App\Http\Controllers\Api\SimpleMediaController::class);
 });
