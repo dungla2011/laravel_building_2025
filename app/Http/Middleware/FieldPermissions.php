@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Log;
 
 class FieldPermissions
 {
+
+    //Định nghĩa chung SystemField ở đây để dùng lại bên dưới:
+    private array $systemFields = ['id'];
+
     /**
      * Handle an incoming request.
      */
@@ -178,7 +182,7 @@ class FieldPermissions
     private function blockAllFields(array $data): array
     {
         // Only keep system fields (id, timestamps)
-        $allowedFields = ['id', 'created_at', 'updated_at'];
+        $allowedFields = $this->systemFields;
         
         if (isset($data['data']) && is_array($data['data'])) {
             $data['data'] = array_map(fn($item) => $this->keepOnlySystemFields($item, $allowedFields), $data['data']);
@@ -230,7 +234,7 @@ class FieldPermissions
         }
 
         // Get submitted fields from request data
-        $submittedFields = array_keys($request->all());
+        $submittedFields = $this->extractFieldsFromRequest($request);
         
         // Get user's field permissions for this table
         $userPermissions = $this->getUserFieldPermissions($user, $tableName);
@@ -280,7 +284,9 @@ class FieldPermissions
      */
     private function isSystemField(string $field): bool
     {
-        return in_array($field, ['id', 'created_at', 'updated_at']);
+        //Dung biến đã định nghĩa ở trên
+        return in_array($field, $this->systemFields);
+
     }
 
     /**
@@ -305,10 +311,12 @@ class FieldPermissions
     private function filterWriteResponse(array $data, Request $request, $user, string $tableName): array
     {
         // Get fields that were submitted in the request
-        $submittedFields = array_keys($request->all());
+        $submittedFields = $this->extractFieldsFromRequest($request);
         
         // System fields that are always allowed
-        $systemFields = ['id'];
+
+        //Dùng biến đã định nghĩa ở trên
+        $systemFields = $this->systemFields;
         
         // Fields to include in response
         $allowedFields = array_merge($systemFields, $submittedFields);
@@ -334,5 +342,30 @@ class FieldPermissions
         }
         
         return $data;
+    }
+
+    /**
+     * Extract fields from request data, handling both single and batch updates
+     */
+    private function extractFieldsFromRequest(Request $request): array
+    {
+        $requestData = $request->all();
+        $fields = [];
+        
+        // Check if this is a batch request (has 'resources' key)
+        if (isset($requestData['resources']) && is_array($requestData['resources'])) {
+            // Batch update: extract fields from all resources
+            foreach ($requestData['resources'] as $resource) {
+                if (is_array($resource)) {
+                    $fields = array_merge($fields, array_keys($resource));
+                }
+            }
+            $fields = array_unique($fields);
+        } else {
+            // Single update: get direct field keys
+            $fields = array_keys($requestData);
+        }
+        
+        return $fields;
     }
 }
