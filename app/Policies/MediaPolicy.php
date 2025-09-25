@@ -22,7 +22,7 @@ class MediaPolicy
     public function view(User $user, Media $media): bool
     {
         // Check if user has permission to view individual media
-        if ($user->getAllPermissions()->contains('name', 'media.show')) {
+        if ($user->getAllPermissions()->contains('name', 'medium.show')) {
             return true;
         }
         
@@ -35,7 +35,7 @@ class MediaPolicy
      */
     public function create(User $user): bool
     {
-        return $user->getAllPermissions()->contains('name', 'media.store');
+        return $user->getAllPermissions()->contains('name', 'medium.store');
     }
 
     /**
@@ -44,7 +44,7 @@ class MediaPolicy
     public function update(User $user, Media $media): bool
     {
         // Check if user has permission to update media
-        if ($user->getAllPermissions()->contains('name', 'media.update')) {
+        if ($user->getAllPermissions()->contains('name', 'medium.update')) {
             return true;
         }
         
@@ -58,7 +58,7 @@ class MediaPolicy
     public function delete(User $user, Media $media): bool
     {
         // Check if user has permission to delete media
-        if ($user->getAllPermissions()->contains('name', 'media.destroy')) {
+        if ($user->getAllPermissions()->contains('name', 'medium.destroy')) {
             return true;
         }
         

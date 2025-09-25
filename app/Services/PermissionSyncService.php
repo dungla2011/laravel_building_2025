@@ -141,8 +141,12 @@ class PermissionSyncService
      */
     private function generatePermissionName(string $resource, string $action, string $method): string
     {
-        // Convert to consistent format
-        $resource = Str::singular(Str::snake($resource));
+        // Convert to consistent format but preserve 'media' as is
+        if ($resource === 'media') {
+            $resource = 'media'; // Keep 'media' instead of converting to 'medium'
+        } else {
+            $resource = Str::singular(Str::snake($resource));
+        }
         $action = Str::snake($action);
         
         return "{$resource}.{$action}";
